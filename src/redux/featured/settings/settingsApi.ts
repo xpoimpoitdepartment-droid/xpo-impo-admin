@@ -46,7 +46,8 @@ export interface ISettings {
   createdAt?: string;
   updatedAt?: string;
   __v?: number;
-  deliveryCharge:number;
+  deliveryCharge: number;
+  freeDeliveryThreshold: number;
 }
 
 export interface ISettingsResponse {

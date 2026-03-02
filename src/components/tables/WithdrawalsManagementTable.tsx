@@ -281,7 +281,7 @@ const WithdrawalAdmin = () => {
                             </div>
                           </td>
                           <td className="py-4 px-6 font-semibold text-slate-800">
-                            ${withdrawal.amount?.toLocaleString() || 0}
+                            ৳{withdrawal.amount?.toLocaleString() || 0}
                           </td>
                           <td className="py-4 px-6 text-slate-600 capitalize">
                             {withdrawal.paymentMethod?.replace("-", " ") ||
@@ -386,7 +386,7 @@ const WithdrawalAdmin = () => {
                 <p className="text-slate-600 text-sm mb-1">{config.label}</p>
                 <p className="text-2xl font-bold text-slate-800">{count}</p>
                 <p className="text-slate-500 text-xs mt-1">
-                  ${totalAmount.toLocaleString()}
+                  ৳{totalAmount.toLocaleString()}
                 </p>
               </div>
             );
