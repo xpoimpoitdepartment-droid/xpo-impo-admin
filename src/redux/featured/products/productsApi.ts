@@ -2,7 +2,7 @@
 import { IInventoryStats } from "@/app/(dashboard)/(dashboardLayout)/admin/inventory-management/page";
 import { baseApi } from "@/redux/api/baseApi";
 import { Product } from "@/types/Product";
-
+// Response type for paginated query
 const productApi = baseApi.injectEndpoints({
   endpoints: builder => ({
     getAllProducts: builder.query<Product[], Record<string, any>>({

@@ -26,9 +26,6 @@ export default function SteadfastApiTester() {
     recipient_phone: '',
     recipient_address: '',
     cod_amount: 0,
-    note: '',
-    alternative_phone: '',
-    recipient_email: '',
     item_description: '',
     total_lot: 1
   });
@@ -84,11 +81,8 @@ export default function SteadfastApiTester() {
       recipient_phone: '',
       recipient_address: '',
       cod_amount: 0,
-      alternative_phone: '',
-      recipient_email: '',
       item_description: '',
       total_lot: 1,
-      note: ''
     }
   ]);
 
@@ -140,6 +134,15 @@ export default function SteadfastApiTester() {
       } as any));
     }
   };
+  const [copiedKeys, setCopiedKeys] = useState<{ [key: string]: boolean }>({});
+
+  const handleCopy = (key: string, value: any) => {
+    navigator.clipboard.writeText(String(value ?? ''));
+    setCopiedKeys(prev => ({ ...prev, [key]: true }));
+    setTimeout(() => {
+      setCopiedKeys(prev => ({ ...prev, [key]: false }));
+    }, 2000);
+  };
   const tabs = [
     { id: 'balance', label: '💰 Balance' },
     { id: 'order', label: '📦 Create Order' },
@@ -151,7 +154,7 @@ export default function SteadfastApiTester() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Steadfast API Tester</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Steadfast Courier Management</h1>
 
         <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200">
           {tabs.map(tab => (
@@ -222,26 +225,6 @@ export default function SteadfastApiTester() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Alternative Phone</label>
-                  <input
-                    type="text"
-                    placeholder="01887654321"
-                    value={orderForm.alternative_phone}
-                    onChange={(e) => setOrderForm({ ...orderForm, alternative_phone: e.target.value })}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Recipient Email</label>
-                  <input
-                    type="email"
-                    placeholder="recipient@example.com"
-                    value={orderForm.recipient_email}
-                    onChange={(e) => setOrderForm({ ...orderForm, recipient_email: e.target.value })}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">COD Amount *</label>
                   <input
                     type="number"
@@ -282,16 +265,6 @@ export default function SteadfastApiTester() {
                   rows={2}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
-                <textarea
-                  placeholder="Handle with care"
-                  value={orderForm.note}
-                  onChange={(e) => setOrderForm({ ...orderForm, note: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2"
-                  rows={2}
-                />
-              </div>
               <button
                 onClick={handleCreateOrder}
                 disabled={orderLoading}
@@ -300,11 +273,36 @@ export default function SteadfastApiTester() {
                 {orderLoading ? 'Creating...' : 'Create Order'}
               </button>
             </div>
-            {orderResult && (
+            {orderResult && orderResult.data && orderResult.data.consignment && (
               <div className={`mt-4 p-4 rounded ${orderResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <pre className="text-sm overflow-auto">{JSON.stringify(orderResult, null, 2)}</pre>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Consignment Result</h3>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Object.entries(orderResult.data.consignment)
+                    .filter(([key]) => !['recipient_email', 'alternative_phone', 'note'].includes(key))
+                    .map(([key, value]) => (
+                      <div key={key} className="bg-slate-50 p-3 rounded-lg flex items-start justify-between border border-slate-100 relative">
+                        <div>
+                          <div className="text-xs text-slate-400">{key.replace(/_/g, ' ').toUpperCase()}</div>
+                          <div className="mt-1 font-medium text-sm break-words">{String(value ?? '—')}</div>
+                        </div>
+                        {['tracking_code', 'consignment_id', 'invoice'].includes(key) && (
+                          <button
+                            onClick={() => handleCopy(key, value)}
+                            disabled={copiedKeys[key]}
+                            className={`ml-2 p-2 rounded text-sm ${copiedKeys[key] ? 'bg-green-100 text-green-700 cursor-default' : 'hover:bg-slate-100'}`}
+                          >
+                            {copiedKeys[key] ? 'Copied!' : 'Copy'}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                </div>
               </div>
             )}
+
           </div>
         )}
 
@@ -363,28 +361,6 @@ export default function SteadfastApiTester() {
                     className="w-full border border-gray-300 rounded px-3 py-2"
                   />
                   <input
-                    type="text"
-                    placeholder="Alternative Phone"
-                    value={order.alternative_phone}
-                    onChange={(e) => {
-                      const newOrders = [...bulkOrders];
-                      newOrders[index].alternative_phone = e.target.value;
-                      setBulkOrders(newOrders);
-                    }}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={order.recipient_email}
-                    onChange={(e) => {
-                      const newOrders = [...bulkOrders];
-                      newOrders[index].recipient_email = e.target.value;
-                      setBulkOrders(newOrders);
-                    }}
-                    className="w-full border border-gray-300 rounded px-3 py-2"
-                  />
-                  <input
                     type="number"
                     placeholder="COD Amount *"
                     value={order.cod_amount}
@@ -430,17 +406,6 @@ export default function SteadfastApiTester() {
                   className="w-full border border-gray-300 rounded px-3 py-2 mt-3"
                   rows={2}
                 />
-                <textarea
-                  placeholder="Note"
-                  value={order.note}
-                  onChange={(e) => {
-                    const newOrders = [...bulkOrders];
-                    newOrders[index].note = e.target.value;
-                    setBulkOrders(newOrders);
-                  }}
-                  className="w-full border border-gray-300 rounded px-3 py-2 mt-3"
-                  rows={2}
-                />
               </div>
             ))}
 
@@ -455,11 +420,8 @@ export default function SteadfastApiTester() {
                       recipient_phone: '',
                       recipient_address: '',
                       cod_amount: 0,
-                      alternative_phone: '',
-                      recipient_email: '',
                       item_description: '',
                       total_lot: 1,
-                      note: ''
                     }
                   ])
                 }
@@ -514,11 +476,17 @@ export default function SteadfastApiTester() {
                 </button>
               </div>
             </div>
-            {trackingResult && (
+            {trackingResult && trackingResult.data && (
               <div className={`mt-4 p-4 rounded ${trackingResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <pre className="text-sm overflow-auto">{JSON.stringify(trackingResult, null, 2)}</pre>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="text-xs text-slate-400">DELIVERY STATUS</div>
+                    <div className="mt-1 font-medium text-sm">{trackingResult.data.delivery_status ?? '—'}</div>
+                  </div>
+                </div>
               </div>
             )}
+
           </div>
         )}
 

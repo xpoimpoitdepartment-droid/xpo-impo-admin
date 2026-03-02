@@ -3,6 +3,13 @@ import { baseApi } from "@/redux/api/baseApi";
 // ==========================
 // ✅ TYPE DECLARATIONS
 // ==========================
+export interface IMobileMfsItem {
+  bKash: { bKashLogo: string; bKashNumber: string };
+  nagad: { nagadLogo: string; nagadNumber: string };
+  rocket: { rocketLogo: string; rocketNumber: string };
+  upay: { upayLogo: string; upayNumber: string };
+}
+
 export interface IPrivacyPolicy {
   title: string;
   description: string;
@@ -17,10 +24,10 @@ export interface IContactAndSocial {
   address: string;
   email: string;
   phone: string;
-  facebookUrl?: string;
-  instagramUrl?: string;
-  whatsappLink?: string;
-  youtubeUrl?: string;
+  facebookUrl?: string[];
+  instagramUrl?: string[];
+  whatsappLink?: string[];
+  youtubeUrl?: string[];
 }
 
 export interface ISettings {
@@ -34,10 +41,12 @@ export interface ISettings {
   privacyPolicy: IPrivacyPolicy;
   returnPolicy: IReturnPolicy;
   contactAndSocial: IContactAndSocial;
+  mobileMfs?: IMobileMfsItem; // ✅ Added here
   sliderImages?: string[];
   createdAt?: string;
   updatedAt?: string;
   __v?: number;
+  deliveryCharge:number;
 }
 
 export interface ISettingsResponse {

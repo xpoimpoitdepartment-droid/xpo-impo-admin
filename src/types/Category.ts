@@ -8,7 +8,7 @@ export interface ICategory {
     name: string;
     url: string;
   };
-  image: File;
+  image: File | string;
   bannerImg: File;
   createdAt: string;
   updatedAt: string; 

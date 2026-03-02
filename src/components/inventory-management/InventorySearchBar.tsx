@@ -1,6 +1,5 @@
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Search, Filter, Download } from "lucide-react"
+import { Search, } from "lucide-react"
 
 interface Props {
   searchTerm: string
@@ -18,16 +17,6 @@ const InventorySearchBar = ({ searchTerm, setSearchTerm }: Props) => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
         />
-      </div>
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm">
-          <Filter className="w-4 h-4 mr-2" />
-          Filter
-        </Button>
-        <Button variant="outline" size="sm">
-          <Download className="w-4 h-4 mr-2" />
-          Export
-        </Button>
       </div>
     </div>
   )

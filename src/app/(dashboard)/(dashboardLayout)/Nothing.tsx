@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useGetOrderSummaryQuery } from "@/redux/featured/order/orderApi";
 import OrderCard from "@/components/shared/OrderCard";
 
 // import LastVendorPayoutTable from "@/components/modules/Dashboard/dashbord/LastVendorPayoutTable";
@@ -52,12 +51,6 @@ import OrderCard from "@/components/shared/OrderCard";
 // type CardConfig = { type: "order"; props: OrderCardProps } | { type: "vendor" };
 
 const AdminDashboard = () => {
-  const { data, isLoading, error } = useGetOrderSummaryQuery();
-  if (isLoading) return <div>লোড হচ্ছে...</div>;
-  if (error) return <div>ডাটা আনতে সমস্যা হয়েছে!</div>;
-
-  const summary = data;
-
   return (
     <div className="p-4 space-y-6">
       {/* Header */}
@@ -101,7 +94,7 @@ const AdminDashboard = () => {
       </div> */}
 
       {/* Row 2: Orders and Vendors (Dynamic Loop) */}
-      <OrderCard summary={summary} />
+      <OrderCard />
 
       {/* Row 3: Shops */}
       {/* <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

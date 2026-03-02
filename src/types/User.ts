@@ -13,4 +13,5 @@ export interface User {
   createdAt?: string;
   updatedAt?: string;
   commissionBalance?:number
+  totalPaidOrders:number;
 }

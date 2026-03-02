@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -20,8 +19,8 @@ type FormData = {
   name?: string;
   email: string;
   password: string;
-  role:string 
-  status:string
+  role: string;
+  status: string;
 };
 
 export default function AuthForm({ type }: AuthFormProps) {
@@ -43,8 +42,8 @@ export default function AuthForm({ type }: AuthFormProps) {
         await handleRegister(data);
       } else {
         await handleLogin(data);
+        return router.push("/");
       }
-      return router.push("/");
     } catch (err: any) {
       setError(err.message || "Something went wrong");
     }
@@ -87,9 +86,7 @@ export default function AuthForm({ type }: AuthFormProps) {
                   {...register("role", { required: "Role is required" })}
                   className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                 >
-                  <option value="">Select Role</option>
-                  <option value="seller">Seller</option>
-                  <option value="sr">SR</option>
+                  <option value="sr">Marketing Officer</option>
                 </select>
                 {errors.role && (
                   <p className="text-red-500 text-xs mt-1">
@@ -132,7 +129,7 @@ export default function AuthForm({ type }: AuthFormProps) {
               <input type="checkbox" className="accent-black" />
               Remember me
             </label>
-            <Link href="#" className="hover:underline">
+            <Link href="/auth/forget-password" className="hover:underline">
               Forgot password?
             </Link>
           </div>

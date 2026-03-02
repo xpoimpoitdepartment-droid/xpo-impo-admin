@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { CategoryCards } from "@/components/categorise/CategoryCards";
@@ -27,107 +26,127 @@ import {
 import { ICategory } from "@/types/Category";
 import { useRouter } from "next/navigation";
 
-import { useGetAllShopsQuery } from "@/redux/featured/shop/shopApi";
-import { setTags } from "@/redux/featured/tags/tagsSlice";
-import { setBrands } from "@/redux/featured/brands/brandsSlice";
-import { setShops } from "@/redux/featured/shop/shopSlice";
-import { useGetAllTagsQuery } from "@/redux/featured/tags/tagsApi";
-import { useGetAllBrandsQuery } from "@/redux/featured/brands/brandsApi";
-
 const CategoryPage = () => {
-  const { data: allProducts, isLoading: ProductsLoading, refetch } = useGetAllProductsQuery({ page: 1, limit: 50000 });
-  const router = useRouter()
-  const { data: allCategories, isLoading } = useGetAllCategoriesQuery();
+  const {
+    data: allProducts,
+    isLoading: ProductsLoading,
+    refetch,
+  } = useGetAllProductsQuery({ page: 1, limit: 50000 });
+  const { data: allCategories, isLoading: CategoriesLoading } =
+    useGetAllCategoriesQuery();
   const [deleteProduct] = useDeleteProductMutation();
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const products = useAppSelector(selectProducts);
   const categories = useAppSelector(selectCategories);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All Product");
   const [currentPage, setCurrentPage] = useState(1);
-
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null
+  );
   const itemsPerPage = 10;
 
+  // Load products & categories
   useEffect(() => {
-    if (allCategories) {
-      dispatch(setCategories(allCategories as ICategory[]));
-    }
-    if (allProducts) {
-      dispatch(setProducts(allProducts as Product[]));
-    }
-  }, [allProducts, allCategories, dispatch]);
+    if (allCategories) dispatch(setCategories(allCategories as ICategory[]));
+    if (allProducts) dispatch(setProducts(allProducts as Product[]));
+  }, [allCategories, allProducts, dispatch]);
 
+  // 🔹 Filtered products for tab counts (category aware)
+  const filteredProductsForCount = useMemo(() => {
+    return products.filter((p) => {
+      if (p.description?.status?.toLowerCase() !== "publish") return false;
+      if (
+        selectedCategoryId &&
+        !p.brandAndCategories?.categories?.some(
+          (cat) => cat._id === selectedCategoryId
+        )
+      )
+        return false;
+      return true;
+    });
+  }, [products, selectedCategoryId]);
+
+  // 🔹 Dynamic filter tabs
+  // 🔹 Filter tabs with dynamic counts
+  // 🔹 Filter tabs with dynamic counts
   const filterTabs = useMemo(
     () => [
       {
         name: "All Product",
-        count: products?.length || 0,
+        count: filteredProductsForCount.length || 0,
         active: activeFilter === "All Product",
       },
       {
-        name: "Featured Products",
-        count: products.filter((p) =>
-          p.brandAndCategories?.tags?.some((tag) => tag.name === "Featured")
-        ).length,
-        active: activeFilter === "Featured Products",
-      },
-      {
         name: "On Sale",
-        count: products.filter((p) =>
-          p.brandAndCategories?.tags?.some((tag) => tag.name === "onSale")
+        count: filteredProductsForCount.filter(
+          (p) =>
+            p.productInfo?.salePrice &&
+            Number(p.productInfo.salePrice) > 0 &&
+            p.productInfo?.quantity > 0 // ✅ only in stock
         ).length,
         active: activeFilter === "On Sale",
       },
       {
         name: "Out of Stock",
-        count: products.filter((p) => p.productInfo.quantity === 0).length,
+        count: filteredProductsForCount.filter(
+          (p) => p.productInfo?.quantity === 0
+        ).length,
         active: activeFilter === "Out of Stock",
       },
     ],
-    [activeFilter, products]
+    [activeFilter, filteredProductsForCount]
   );
 
+  // 🔹 Filtered products for table (category + filter + search)
   const filteredProducts = useMemo(() => {
-    return products.filter((product: Product) => {
+    return products.filter((p) => {
+      if (p.description?.status?.toLowerCase() !== "publish") return false;
+
       if (
-        activeFilter === "Featured Products" &&
-        !product?.brandAndCategories?.tags?.some(
-          (tag) => tag.name === "Featured"
+        selectedCategoryId &&
+        !p.brandAndCategories?.categories?.some(
+          (cat) => cat._id === selectedCategoryId
         )
       )
         return false;
+
+      // ✅ On Sale filter: salePrice > 0 && quantity > 0
       if (
         activeFilter === "On Sale" &&
-        !product?.brandAndCategories?.tags?.some((tag) => tag.name === "onSale")
+        !(
+          p.productInfo?.salePrice &&
+          Number(p.productInfo.salePrice) > 0 &&
+          p.productInfo?.quantity > 0
+        )
       )
         return false;
-      if (activeFilter === "Out of Stock" && product.productInfo.quantity !== 0)
+
+      if (activeFilter === "Out of Stock" && p.productInfo?.quantity !== 0)
         return false;
 
       if (
         searchQuery.trim() &&
-        !product.description.name
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase())
-      ) {
+        !p.description?.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
         return false;
-      }
 
       return true;
     });
-  }, [products, activeFilter, searchQuery]);
+  }, [products, activeFilter, searchQuery, selectedCategoryId]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredProducts, currentPage]);
 
+  const startItemNumber = (currentPage - 1) * itemsPerPage + 1;
+
   useEffect(() => {
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(1);
-    }
+    if (currentPage > totalPages && totalPages > 0) setCurrentPage(1);
   }, [filteredProducts.length, currentPage]);
 
   const handleProductAction = (action: string, id: string) => {
@@ -140,79 +159,60 @@ const CategoryPage = () => {
         confirmButtonColor: "#3085d6",
         cancelButtonColor: "#d33",
         confirmButtonText: "Yes, delete it!",
-      }).then(async (result: any) => {
+      }).then(async (result) => {
         if (result.isConfirmed) {
           try {
             const res = await deleteProduct(id).unwrap();
-
-            Swal.fire({
-              title: "Deleted!",
-              text: `${res.message}`,
-              icon: "success",
-            });
+            Swal.fire("Deleted!", `${res.message}`, "success");
             refetch();
           } catch (error) {
-            Swal.fire({
-              title: "Error!",
-              text: "Something went wrong while deleting.",
-              icon: "error",
-            });
+            Swal.fire(
+              "Error!",
+              "Something went wrong while deleting.",
+              "error"
+            );
+            console.error(error);
           }
         }
       });
     }
-
     if (action === "edit") {
       router.push(`/admin/edit-product/${id}`);
     }
   };
 
-  const { data: tagsDatau, isLoading: isTagsLoading } =
-    useGetAllTagsQuery(undefined);
-  const { data: brandsu, isLoading: isBrandsLoading } =
-    useGetAllBrandsQuery(undefined);
-  const { data: shopDatau, isLoading: isShopDataLoading } =
-    useGetAllShopsQuery();
-
-  useEffect(() => {
-    if (tagsDatau) {
-      dispatch(setTags(tagsDatau));
-    }
-    if (brandsu) {
-      dispatch(setBrands(brandsu));
-    }
-    if (shopDatau) {
-      dispatch(setShops(shopDatau));
-    }
-    refetch();
-  }, [dispatch, tagsDatau, brandsu, shopDatau, refetch]);
-
   return (
     <div className="min-h-screen bg-gray-50 p-2 md:p-6">
       <div className="w-full space-y-6">
         <HeaderActions />
-        {isLoading ? (
+
+        {CategoriesLoading ? (
           <span>Loading...</span>
         ) : (
-          <CategoryCards categories={categories} />
+          <CategoryCards
+            categories={categories}
+            selectedCategoryId={selectedCategoryId}
+            onCategoryClick={(id) => {
+              setSelectedCategoryId(id || null);
+              setCurrentPage(1);
+            }}
+          />
         )}
 
-        {/* Filter + Search Bar */}
         <FilterBar
           tabs={filterTabs}
           activeFilter={activeFilter}
           setActiveFilter={(filter) => {
             setActiveFilter(filter);
-            setCurrentPage(1); // Reset page on filter change
+            setCurrentPage(1);
           }}
           searchQuery={searchQuery}
           setSearchQuery={(query) => {
             setSearchQuery(query);
-            setCurrentPage(1); // Reset page on search change
+            setCurrentPage(1);
           }}
         />
 
-        {/* Product Table */}
         <Card>
           <CardContent className="p-0">
             {ProductsLoading ? (
@@ -225,12 +225,13 @@ const CategoryPage = () => {
               <ProductTable
                 products={paginatedProducts}
                 onAction={handleProductAction}
+                activeFilter={activeFilter}
+                startIndex={startItemNumber}
               />
             )}
           </CardContent>
         </Card>
 
-        {/* Pagination */}
         <PaginationControls
           currentPage={currentPage}
           totalItems={filteredProducts.length}

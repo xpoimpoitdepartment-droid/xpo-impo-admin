@@ -8,6 +8,7 @@ import {
   useGetWithdrawalsQuery,
   useUpdateWithdrawalsMutation,
 } from "@/redux/featured/withdrawals/withdrawalsApi";
+import toast from "react-hot-toast";
 
 // ✅ Allowed statuses
 type Status = "approved" | "on-hold" | "processing" | "pending" | "rejected";
@@ -72,9 +73,16 @@ const WithdrawalAdmin = () => {
         data: { status: newStatus },
       }).unwrap();
 
+      // Dynamic success message based on status label
+      const statusLabel = statusConfig[newStatus]?.label || newStatus;
+      toast.success(`Status updated to "${statusLabel}" successfully!`);
+
       refetch();
     } catch (error: any) {
-      alert(
+      console.error("Failed to update withdrawal status:", error);
+
+      // Show backend error message in toast
+      toast.error(
         error?.data?.message || "Failed to update status. Please try again."
       );
     }
@@ -218,6 +226,9 @@ const WithdrawalAdmin = () => {
                     Payment Method
                   </th>
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">
+                    Payment Account Number
+                  </th>
+                  <th className="text-left py-4 px-6 font-semibold text-slate-700">
                     Time
                   </th>
                   <th className="text-left py-4 px-6 font-semibold text-slate-700">
@@ -230,85 +241,98 @@ const WithdrawalAdmin = () => {
               </thead>
               <tbody>
                 {filteredWithdrawals.length > 0 ? (
-                  filteredWithdrawals.map((withdrawal, idx) => {
-                    const isValidStatus = allowedStatuses.includes(
-                      withdrawal.status as Status
-                    );
-                    const config = isValidStatus
-                      ? statusConfig[withdrawal.status as Status]
-                      : statusConfig.pending;
-                    const Icon = config.icon || Clock;
+                  [...filteredWithdrawals]
+                    .sort((a, b) => {
+                      const dateA = new Date(a.createdAt || 0).getTime();
+                      const dateB = new Date(b.createdAt || 0).getTime();
+                      return dateB - dateA; // newest first
+                    })
+                    .map((withdrawal, idx) => {
+                      const isValidStatus = allowedStatuses.includes(
+                        withdrawal.status as Status
+                      );
+                      const config = isValidStatus
+                        ? statusConfig[withdrawal.status as Status]
+                        : statusConfig.pending;
+                      const Icon = config.icon || Clock;
 
-                    return (
-                      <tr
-                        key={withdrawal._id}
-                        className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
-                          idx % 2 === 0 ? "bg-white" : "bg-slate-25"
-                        }`}
-                      >
-                        <td className="py-4 px-6 font-mono text-sm text-slate-600">
-                          {withdrawal._id?.slice(-8) || "N/A"}
-                        </td>
-                        <td className="py-4 px-6">
-                          <div>
-                            <p>
-                              {typeof withdrawal?.user === "object"
-                                ? withdrawal?.user?.name
-                                : "Unknown"}
-                            </p>
-                            <p>
-                              {typeof withdrawal?.user === "object"
-                                ? withdrawal?.user?.email
-                                : "N/A"}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="py-4 px-6 font-semibold text-slate-800">
-                          ${withdrawal.amount?.toLocaleString() || 0}
-                        </td>
-                        <td className="py-4 px-6 text-slate-600 capitalize">
-                          {withdrawal.paymentMethod?.replace("-", " ") || "N/A"}
-                        </td>
-                        <td className="py-4 px-6 text-slate-600 text-sm">
-                          {withdrawal.createdAt
-                            ? formatDate(withdrawal.createdAt)
-                            : "N/A"}
-                        </td>
-                        <td className="py-4 px-6">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border ${
-                              isValidStatus
-                                ? config.color
-                                : "bg-red-100 text-red-700 border-red-300"
-                            }`}
-                          >
-                            <Icon className="w-4 h-4" />
-                            {isValidStatus ? config.label : "Invalid Status"}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <select
-                            value={
-                              isValidStatus ? withdrawal.status : "pending"
-                            }
-                            onChange={(e) =>
-                              handleStatusChange(
-                                withdrawal._id!,
-                                e.target.value as Status
-                              )
-                            }
-                            className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
-                          >
-                            {allowedStatuses.map((status) => (
-                              <option key={status} value={status}>
-                                {statusConfig[status].label}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      </tr>
-                    );
-                  })
+                      return (
+                        <tr
+                          key={withdrawal._id}
+                          className={`border-b border-slate-100 hover:bg-slate-50 transition-colors ${
+                            idx % 2 === 0 ? "bg-white" : "bg-slate-25"
+                          }`}
+                        >
+                          <td className="py-4 px-6 font-mono text-sm text-slate-600">
+                            {withdrawal._id?.slice(-8) || "N/A"}
+                          </td>
+                          <td className="py-4 px-6">
+                            <div>
+                              <p>
+                                {typeof withdrawal?.user === "object"
+                                  ? withdrawal?.user?.name
+                                  : "Unknown"}
+                              </p>
+                              <p>
+                                {typeof withdrawal?.user === "object"
+                                  ? withdrawal?.user?.email
+                                  : "N/A"}
+                              </p>
+                            </div>
+                          </td>
+                          <td className="py-4 px-6 font-semibold text-slate-800">
+                            ${withdrawal.amount?.toLocaleString() || 0}
+                          </td>
+                          <td className="py-4 px-6 text-slate-600 capitalize">
+                            {withdrawal.paymentMethod?.replace("-", " ") ||
+                              "N/A"}
+                          </td>
+                          <td className="py-4 px-6 text-slate-600 capitalize">
+                            {withdrawal.paymentAccountNumber?.replace(
+                              "-",
+                              " "
+                            ) || "N/A"}
+                          </td>
+                          <td className="py-4 px-6 text-slate-600 text-sm">
+                            {withdrawal.createdAt
+                              ? formatDate(withdrawal.createdAt)
+                              : "N/A"}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border ${
+                                isValidStatus
+                                  ? config.color
+                                  : "bg-red-100 text-red-700 border-red-300"
+                              }`}
+                            >
+                              <Icon className="w-4 h-4" />
+                              {isValidStatus ? config.label : "Invalid Status"}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <select
+                              value={
+                                isValidStatus ? withdrawal.status : "pending"
+                              }
+                              onChange={(e) =>
+                                handleStatusChange(
+                                  withdrawal._id!,
+                                  e.target.value as Status
+                                )
+                              }
+                              className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all cursor-pointer"
+                            >
+                              {allowedStatuses.map((status) => (
+                                <option key={status} value={status}>
+                                  {statusConfig[status].label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })
                 ) : (
                   <tr>
                     <td

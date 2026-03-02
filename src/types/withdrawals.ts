@@ -1,20 +1,21 @@
 
 // 🔹 Withdrawal Type
 export interface IWithdrawal {
-  _id?: string; // optional because MongoDB ID might not exist before creation
-  shopId?: string; // optional, if associated with a shop
+  _id?: string;
+  shopId?: string;
   user?: {
     _id: string;
     name: string;
     email: string;
     role?: string;
     commissionBalance?: number;
-  }| string  // supports either populated user object or userId string
-  amount: number; // required
-  paymentMethod: "cash-on"; // currently only cash-on
-  status?: "pending" | "approved" | "on-hold" | "processing" | "rejected" | string; // optional, defaults to pending
-  description: string; // short description (like Withdraw)
-  note: string; // admin or user note
+  } | string; // either user object or userId string
+  amount: number;
+  paymentMethod: "cash-on" | "bKash" | "nagad" | "rocket" | "upay"; // backend supported methods
+  paymentAccountNumber: string; // required by backend
+  status?: "pending" | "approved" | "on-hold" | "processing" | "rejected" | string;
+  description?: string;
+  note?: string;
   createdAt?: string;
   updatedAt?: string;
 }

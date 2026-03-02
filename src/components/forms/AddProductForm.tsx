@@ -784,46 +784,6 @@ export default function AddProductForm() {
               Organization
             </h2>
             {/* Brand */}
-            <FormField
-              control={form.control}
-              name="brandAndCategories.brand"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Brand</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select a brand" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isBrandsLoading ? (
-                        <SelectItem disabled value="loading">
-                          <span className="animate-pulse text-gray-400">
-                            Loading Brands...
-                          </span>
-                        </SelectItem>
-                      ) : (brands ?? []).length > 0 ? (
-                        (brands ?? []).map((brand) => (
-                          <SelectItem key={brand._id} value={brand._id}>
-                            {brand.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem disabled value="no-brands">
-                          No brands available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* Categories */}
             <FormField
               control={form.control}

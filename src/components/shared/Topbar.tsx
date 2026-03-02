@@ -20,7 +20,7 @@ import { IoAdd, IoLink } from "react-icons/io5";
 import Link from "next/link";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { logoutUser, selectCurrentUser } from "@/redux/featured/auth/authSlice";
-import { useLogoutMutation } from "@/redux/featured/auth/authApi";
+import { useLogoutUserMutation } from "@/redux/featured/auth/authApi";
 import { signOut } from "next-auth/react";
 
 interface TopNavbarProps {
@@ -35,7 +35,7 @@ export function TopNavbar({ isSidebarOpen, toggleSidebar }: TopNavbarProps) {
   const currentUser = useAppSelector(selectCurrentUser);
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const [logout] = useLogoutMutation();
+  const [logout] = useLogoutUserMutation();
 
   const handleLogout = async () => {
     if (currentUser?._id) {
@@ -88,14 +88,12 @@ export function TopNavbar({ isSidebarOpen, toggleSidebar }: TopNavbarProps) {
       </div>
 
       {/* Middle - Search Bar - Now fully responsive */}
-      <div className="flex-1 mx-2 md:mx-4">
-      </div>
+      <div className="flex-1 mx-2 md:mx-4"></div>
 
       {/* Right side */}
       <div className="flex items-center justify-end gap-2">
         {/* Action Buttons - Hidden on small screens */}
-        <div className="hidden md:flex items-center gap-1">
-        </div>
+        <div className="hidden md:flex items-center gap-1"></div>
 
         {/* Icon Buttons */}
         <div className="hidden md:flex items-center gap-1">

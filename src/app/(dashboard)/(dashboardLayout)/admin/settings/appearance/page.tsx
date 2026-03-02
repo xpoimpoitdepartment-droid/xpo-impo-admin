@@ -60,10 +60,6 @@ const MAX_LOGO_SIZE = 3 * 1024 * 1024; // 3MB
     if (type === "banner") {
       const img = document.createElement("img");
       img.onload = () => {
-        if (img.width >= 1920 || img.height !== 600) {
-          toast.error("❌ Banner must be exactly 1920×600 pixels!");
-          return;
-        }
 
         const url = URL.createObjectURL(file);
         const newPreviews = [...bannerPreviews];

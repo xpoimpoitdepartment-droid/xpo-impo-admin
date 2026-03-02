@@ -101,12 +101,12 @@ export function AppSidebar({
     role === "admin"
       ? "/admin"
       : role === "sr"
-        ? "/sr"
-        : role === "vendor"
-          ? "/vendor"
-          : role === "customer"
-            ? "/customer"
-            : "/";
+      ? "/sr"
+      : role === "vendor"
+      ? "/vendor"
+      : role === "customer"
+      ? "/customer"
+      : "/";
 
   // Admin/Vendor navigation model (unchanged)
   const navigationItems = useMemo(
@@ -137,16 +137,16 @@ export function AppSidebar({
           label: "Tags",
           href: "/admin/tag-management",
         },
-        {
-          icon: Box as IconRenderer,
-          label: "Brand",
-          href: "/admin/brand-management",
-        },
-        {
-          icon: Palette as IconRenderer,
-          label: "Attributes",
-          href: "/admin/product-attributes",
-        },
+        // {
+        //   icon: Box as IconRenderer,
+        //   label: "Brand",
+        //   href: "/admin/brand-management",
+        // },
+        // {
+        //   icon: Palette as IconRenderer,
+        //   label: "Attributes",
+        //   href: "/admin/product-attributes",
+        // },
         {
           icon: BarChart3 as IconRenderer,
           label: "Inventory",
@@ -200,8 +200,13 @@ export function AppSidebar({
           label: "Coupons",
           href: "/admin/settings/coupons",
         },
+        {
+          icon: Tag as IconRenderer,
+          label: "Payment Methods Settings",
+          href: "/admin/settings/payment-methods",
+        },
       ],
-      // -------- Courier Management (Separate Section) --------
+       // -------- Courier Management (Separate Section) --------
       courierManagement: [
         {
           icon: Truck as IconRenderer,
@@ -237,7 +242,7 @@ export function AppSidebar({
         },
       ],
     }),
-    [],
+    []
   );
 
   // SR items
@@ -290,7 +295,7 @@ export function AppSidebar({
           ? "bg-blue-50 text-blue-700 font-medium"
           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900",
         isCollapsed ? "justify-center px-2" : "pl-4",
-        "transform hover:translate-x-1",
+        "transform hover:translate-x-1"
       )}
     >
       <Icon
@@ -298,7 +303,7 @@ export function AppSidebar({
         className={cn(
           "flex-shrink-0",
           isActive(href) ? "text-blue-700" : "text-gray-600",
-          "transition-colors duration-200",
+          "transition-colors duration-200"
         )}
       />
       {!isCollapsed && (
@@ -313,7 +318,7 @@ export function AppSidebar({
     Icon: IconRenderer,
     label: string,
     items: ReadonlyArray<{ icon: IconRenderer; label: string; href: string }>,
-    sectionKey: string,
+    sectionKey: string
   ) => {
     const isOpen = openSection === sectionKey;
 
@@ -332,7 +337,7 @@ export function AppSidebar({
               "hover:bg-gray-50 px-3 py-2.5",
               isCollapsed ? "justify-center px-2" : "pl-4",
               "text-gray-600 hover:text-gray-900",
-              "group",
+              "group"
             )}
           >
             <div className="flex items-center gap-3">
@@ -353,7 +358,7 @@ export function AppSidebar({
                   "transition-all duration-200",
                   isOpen ? "rotate-180" : "",
                   "text-gray-500",
-                  "group-hover:text-blue-600",
+                  "group-hover:text-blue-600"
                 )}
               />
             )}
@@ -364,7 +369,7 @@ export function AppSidebar({
             "overflow-hidden transition-all duration-300 ease-in-out",
             isCollapsed ? "ml-0" : "ml-2 pl-6 border-l border-gray-200",
             "data-[state=open]:animate-collapsible-down",
-            "data-[state=closed]:animate-collapsible-up",
+            "data-[state=closed]:animate-collapsible-up"
           )}
         >
           <div className="space-y-1 mt-1">
@@ -383,7 +388,7 @@ export function AppSidebar({
                     ? "bg-blue-50 text-blue-700 font-medium"
                     : "text-gray-600 hover:text-gray-900",
                   isCollapsed ? "justify-center px-2" : "",
-                  "transform hover:translate-x-1",
+                  "transform hover:translate-x-1"
                 )}
               >
                 <item.icon
@@ -391,7 +396,7 @@ export function AppSidebar({
                   className={cn(
                     "flex-shrink-0",
                     isActive(item.href) ? "text-blue-700" : "text-gray-600",
-                    "transition-colors duration-200",
+                    "transition-colors duration-200"
                   )}
                 />
                 {!isCollapsed && (
@@ -409,7 +414,7 @@ export function AppSidebar({
 
   const renderSection = (
     title: string,
-    items: { icon: IconRenderer; label: string; href: string }[],
+    items: { icon: IconRenderer; label: string; href: string }[]
   ) => (
     <div key={`section-${title}`} className="space-y-1">
       {!isCollapsed && (
@@ -431,7 +436,7 @@ export function AppSidebar({
         isOpen ? "translate-x-0" : "-translate-x-full",
         "md:translate-x-0 md:static",
         isCollapsed ? "w-11 md:w-16" : "w-64",
-        "overflow-hidden",
+        "overflow-hidden"
       )}
     >
       {/* Logo */}
@@ -439,7 +444,7 @@ export function AppSidebar({
         className={cn(
           "flex items-center gap-3 p-4 bg-white h-16 transition-all duration-300",
           isCollapsed ? "justify-center px-2" : "px-5",
-          "shrink-0",
+          "shrink-0"
         )}
       >
         <Image
@@ -494,7 +499,7 @@ export function AppSidebar({
                 ShoppingCart as IconRenderer,
                 "Orders",
                 srOrderItems,
-                "srOrderManagement",
+                "srOrderManagement"
               )}
             </div>
 
@@ -509,7 +514,7 @@ export function AppSidebar({
                 CreditCard as IconRenderer,
                 "Wallet",
                 srWalletItems,
-                "srWallet",
+                "srWallet"
               )}
             </div>
           </>
@@ -529,29 +534,31 @@ export function AppSidebar({
                   Package,
                   "Products",
                   navigationItems.productManagement.slice(0, 3),
-                  "productManagement",
+                  "productManagement"
                 )}
                 {renderLink("/admin/category-management", Hash, "Categories")}
                 {renderLink("/admin/tag-management", Tag, "Tags")}
-                {renderLink("/admin/brand-management", Box, "Brand")}
+                {/* {renderLink("/admin/brand-management", Box, "Brand")} */}
                 {renderLink("/admin/product-attributes", Palette, "Attributes")}
                 {renderLink(
                   "/admin/inventory-management",
                   BarChart3,
-                  "Inventory",
+                  "Inventory"
                 )}
               </div>
             </div>
-            <div className="ml-1">
-              {renderSection(
-                "ORDER MANAGEMENT",
-                navigationItems.orderManagement,
-              )}
-            </div>
+
             <div>
               {renderSection(
                 "WITHDRAWALS MANAGEMENT",
-                navigationItems.WithdrawalsManagement,
+                navigationItems.WithdrawalsManagement
+              )}
+            </div>
+
+            <div className="ml-1">
+              {renderSection(
+                "ORDER MANAGEMENT",
+                navigationItems.orderManagement
               )}
             </div>
 
@@ -559,10 +566,7 @@ export function AppSidebar({
               {renderSection("SETTING", navigationItems.settingManagement)}
             </div>
             <div className="ml-1">
-              {renderSection(
-                "COURIER MANAGEMENT",
-                navigationItems.courierManagement,
-              )}
+              {renderSection("COURIER MANAGEMENT", navigationItems.courierManagement)}
             </div>
 
             <div key="user-control-section" className="space-y-2">

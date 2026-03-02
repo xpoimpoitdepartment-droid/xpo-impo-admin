@@ -12,14 +12,19 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/grid";
 
-// import required modules
 import { Navigation, A11y, Grid } from "swiper/modules";
 
 interface CategoryCardsProps {
   categories: ICategory[];
+  onCategoryClick?: (id: string) => void;
+  selectedCategoryId?: string | null;
 }
 
-export function CategoryCards({ categories }: CategoryCardsProps) {
+export function CategoryCards({
+  categories,
+  onCategoryClick,
+  selectedCategoryId,
+}: CategoryCardsProps) {
   const colors = [
     "bg-red-100",
     "bg-green-100",
@@ -53,31 +58,31 @@ export function CategoryCards({ categories }: CategoryCardsProps) {
           prevEl: ".swiper-button-prev-custom",
         }}
         breakpoints={{
-          640: {
-            slidesPerView: 3,
-            spaceBetween: 16,
-          },
-          768: {
-            slidesPerView: 4,
-            spaceBetween: 20,
-          },
-          1024: {
-            slidesPerView: 4,
-            spaceBetween: 20,
-          },
+          640: { slidesPerView: 3, spaceBetween: 16 },
+          768: { slidesPerView: 4, spaceBetween: 20 },
+          1024: { slidesPerView: 4, spaceBetween: 20 },
         }}
         className="!py-4"
         style={{ paddingLeft: "1rem", paddingRight: "1rem" }}
       >
         {categories?.map((item) => {
           const color = getColorFromId(item._id, colors);
+          const isSelected = selectedCategoryId === item._id;
+
           return (
             <SwiperSlide
               key={item._id}
               style={{ height: "auto", marginBottom: "16px" }}
             >
               <Card
-                className={`w-full h-full cursor-pointer transition-all hover:shadow-md ${color}`}
+                onClick={() =>
+                  onCategoryClick?.(
+                    isSelected ? "" : item._id
+                  ) /* toggle selection */
+                }
+                className={`w-full h-full cursor-pointer transition-all hover:shadow-md ${color} ${
+                  isSelected ? "ring-2 ring-blue-500" : ""
+                }`}
               >
                 <CardContent className="flex items-center gap-3 py-4 px-3">
                   <div className="text-2xl shrink-0">
@@ -101,7 +106,6 @@ export function CategoryCards({ categories }: CategoryCardsProps) {
         })}
       </Swiper>
 
-      {/* Custom Navigation Buttons */}
       <button
         aria-label="Previous slide"
         className="swiper-button-prev-custom absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white p-2 shadow-md transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"

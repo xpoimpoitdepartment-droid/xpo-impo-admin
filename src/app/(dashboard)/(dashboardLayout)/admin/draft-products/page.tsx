@@ -205,6 +205,7 @@ const CategoryPage = () => {
               </div>
             ) : (
               <ProductTable
+                activeFilter={activeFilter}
                 products={paginateddraftProducts}
                 onAction={handleProductAction}
               />

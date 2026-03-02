@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { setTags } from "@/redux/featured/tags/tagsSlice";
 import { useAppDispatch } from "@/redux/hooks";
 import { ITag, ITagQueryParams } from "@/types/tags";
@@ -15,6 +15,7 @@ import ViewTagDetails from "@/components/tag/ViewTag";
 import {
   useGetAllTagsQuery,
   useGetTagStatusQuery,
+  useDeleteTagMutation,
 } from "@/redux/featured/tags/tagsApi";
 import {
   Select,
@@ -24,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import PaginationView from "@/components/Pagination";
+import Swal from "sweetalert2";
 
 interface TagData {
   data: ITag[];
@@ -34,6 +36,7 @@ const TagManagement = () => {
   const dispatch = useAppDispatch();
   const [currentPage, setCurrentPage] = useState(1);
   const [queryParams, setQueryParams] = useState<ITagQueryParams>({ limit: 8 });
+  const [deleteTag] = useDeleteTagMutation();
 
   const {
     data: TagStatus,
@@ -71,7 +74,6 @@ const TagManagement = () => {
     color: colors[tag.name] || "bg-gray-100 text-gray-800",
   }));
 
-
   const types = [
     "Marketing",
     "Status",
@@ -81,9 +83,43 @@ const TagManagement = () => {
     "Exclusivity",
   ];
 
+  // ✅ Delete handler with SweetAlert confirmation
+  const handleDeleteTag = async (id: string) => {
+    const confirm = await Swal.fire({
+      title: "Are you sure?",
+      text: "This tag will be permanently deleted!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        await deleteTag(id).unwrap();
+        await refetch();
+        Swal.fire({
+          title: "Deleted!",
+          text: "Tag deleted successfully.",
+          icon: "success",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (error) {
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to delete tag.",
+          icon: "error",
+        });
+      }
+    }
+  };
+
   if (!allTags && !TagStatus) {
     return <div>Loading....</div>;
   }
+
   return (
     <div className="space-y-6 py-6">
       {/* Add Tag Button */}
@@ -94,95 +130,6 @@ const TagManagement = () => {
         >
           + Add Tag
         </CreateAndUpdateTag>
-      </div>
-
-      {/* Stats Cards */}
-      {TagStatusLoading ? (
-        <div>Loading...</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Total Tags</p>
-                  <p className="text-2xl font-bold">
-                    {TagStatus?.data.totalTags || 0}
-                  </p>
-                  <p className="text-xs text-gray-500">+15 this month</p>
-                </div>
-                <div className={`text-2xl text-red-600`}>🏷️</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="p-4">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Most Used Tag</p>
-                  <p className="text-2xl font-bold">
-                    {TagStatus?.data.mostUsedTagAgg?.[0].count || 0}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    #{TagStatus?.data.mostUsedTagAgg?.[0].name} tag usage
-                  </p>
-                </div>
-                <div className={`text-2xl text-green-600`}>📈</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="p-4">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tag Types</p>
-                  <p className="text-2xl font-bold">{types.length}</p>
-                  <p className="text-xs text-gray-500">Different categories</p>
-                </div>
-                <div className={`text-2xl text-blue-600`}>📊</div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="p-4">
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Tagged Products</p>
-                  <p className="text-2xl font-bold">
-                    {TagStatus?.data.taggedProducts || 0}
-                  </p>
-                  <p className="text-xs text-gray-500">86% of inventory</p>
-                </div>
-                <div className={`text-2xl text-red-600`}>💎</div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Tag Types Section */}
-      <div className="bg-white rounded-lg p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Tag Types</h2>
-          <p className="text-gray-600 text-sm">
-            Overview of organized tag categories
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {TagStatusLoading ? (
-            <div>Loading....</div>
-          ) : (
-            tagTypes?.map((type: any, index: number) => (
-              <div key={index} className="text-center">
-                <div className="bg-gray-50 rounded-lg p-4 mb-2">
-                  <div className="text-2xl font-bold">{type.count}</div>
-                </div>
-                <Badge className={type.color}>{type.name}</Badge>
-              </div>
-            ))
-          )}
-        </div>
       </div>
 
       {/* Tag Management Section */}
@@ -232,13 +179,10 @@ const TagManagement = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" disabled size="sm">
-              Sort by Usage
-            </Button>
           </div>
         </div>
 
-        {/* Tags Grid with Search Filter */}
+        {/* Tags Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {isLoading ? (
             <div>Loading.......</div>
@@ -250,6 +194,11 @@ const TagManagement = () => {
                     <Badge className={"bg-amber-100 text-black"}>
                       {tag.name}
                     </Badge>
+                    {/* 🗑️ Delete icon */}
+                    <Trash2
+                      className="w-4 h-4 text-red-500 cursor-pointer hover:text-red-700"
+                      onClick={() => handleDeleteTag(tag._id)}
+                    />
                   </div>
 
                   <div className="space-y-2 mb-4">
@@ -262,6 +211,7 @@ const TagManagement = () => {
                       <span className="ml-2 font-medium">{tag.details}</span>
                     </div>
                   </div>
+
                   <div className="flex gap-2">
                     <CreateAndUpdateTag
                       type="edit"
@@ -278,6 +228,7 @@ const TagManagement = () => {
           )}
         </div>
       </div>
+
       <PaginationView
         setCurrentPage={setCurrentPage}
         currentPage={currentPage}

@@ -1,8 +1,8 @@
 // src/components/sr/OrdersTable.tsx
 "use client";
 
-import { useState, useMemo } from "react";
-import { useSelector } from "react-redux"; // Get user info
+import { useState, useMemo, useRef } from "react";
+import { useSelector } from "react-redux";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUpDown, Eye } from "lucide-react";
+import { ArrowUpDown, Eye, Printer } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,9 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useGetMyOrdersQuery } from "@/redux/featured/order/orderApi"; // ✅ Use my orders endpoint
+import { useGetMyOrdersQuery } from "@/redux/featured/order/orderApi";
+import { useGetSettingsQuery } from "@/redux/featured/settings/settingsApi";
+import { useReactToPrint } from "react-to-print";
 
 // Format BDT
 function formatBDT(n: number) {
@@ -65,158 +67,510 @@ function OrderModal({
   order,
   isOpen,
   onClose,
+  deliveryCharge,
 }: {
   order: any;
   isOpen: boolean;
   onClose: () => void;
-  // 1. ✅ REMOVED orderStatus prop
+  deliveryCharge: number;
 }) {
+  // Hooks MUST be at the top level, before any early return
+  const printRef = useRef<HTMLDivElement>(null);
+const handlePrint = useReactToPrint({
+  contentRef: printRef,
+  documentTitle: `Receipt_${order?._id?.slice(-8).toUpperCase() || "Unknown"}`,
+  pageStyle: `
+    @page {
+      size: 80mm auto; /* fixed width, auto height */
+      margin: 5mm;
+    }
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center; /* center horizontally */
+      }
+      #print-content {
+        width: 80mm;
+        text-align: center; /* center text/content */
+      }
+    }
+  `,
+});
+
+
+  // Early return AFTER hooks
   if (!order) return null;
 
   const items = order.orderInfo || [];
-  // 2. ✅ Get status from the order object itself
   const status = order.status || "other";
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>Order Details</DialogTitle>
-          <DialogClose asChild></DialogClose>
-        </DialogHeader>
+    <>
+      {/* Dialog */}
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Order Details</DialogTitle>
+              <Button
+                onClick={handlePrint}
+                variant="outline"
+                size="sm"
+                className="ml-auto mr-8"
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                Print Receipt
+              </Button>
+            </div>
+            <DialogClose asChild />
+          </DialogHeader>
 
-        <div className="space-y-4 px-6 pb-6 text-sm">
-          {/* Basic Info */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <span className="font-medium">Order ID:</span> {order._id}
-            </div>
-            <div>
-              <span className="font-medium">Created At:</span>{" "}
-              {new Date(order.createdAt).toLocaleString()}
-            </div>
-            <div>
-              <span className="font-medium">Payment Method:</span>{" "}
-              <span className="capitalize">{order.paymentInfo}</span>
-            </div>
-            <div>
-              <span className="font-medium">Total Amount:</span>{" "}
-              {formatBDT(order.totalAmount)}
-            </div>
-          </div>
-
-          {/* Customer Info */}
-          <div className="border-t pt-3">
-            <h4 className="font-semibold mb-2">Customer Info</h4>
-            <div>
+          <div className="space-y-4 px-6 pb-6 text-sm">
+            {/* Basic Info */}
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <span className="font-medium">Name:</span>{" "}
-                {order.customerInfo.firstName} {order.customerInfo.lastName}
+                <span className="font-medium">Order ID:</span> {order._id}
+              </div>
+              <div>
+                <span className="font-medium">Created At:</span>{" "}
+                {new Date(order.createdAt).toLocaleString()}
+              </div>
+              <div>
+                <span className="font-medium">Payment Method:</span>{" "}
+                <span className="capitalize">{order.paymentInfo}</span>
+              </div>
+              <div>
+                <span className="font-medium">Delivery Charge:</span>{" "}
+                {formatBDT(deliveryCharge)}
+              </div>
+              <div>
+                <span className="font-medium">Total Amount:</span>{" "}
+                {formatBDT(order.totalAmount)}
+              </div>
+            </div>
+
+            {/* Customer Info */}
+            <div className="border-t pt-3">
+              <h4 className="font-semibold mb-2">Customer Info</h4>
+              <div>
+                <div>
+                  <span className="font-medium">Name:</span>{" "}
+                  {order.customerInfo.firstName} {order.customerInfo.lastName}
+                </div>
+                {order.customerInfo.phone && (
+                  <div>
+                    <span className="font-medium">Phone:</span>{" "}
+                    {order.customerInfo.phone}
+                  </div>
+                )}
+                {order.customerInfo.address && (
+                  <div className="col-span-2">
+                    <span className="font-medium">Address:</span>{" "}
+                    {order.customerInfo.address}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Product Info */}
+            <div className="border-t pt-3">
+              <h4 className="font-semibold mb-3">Products</h4>
+
+              <div className="space-y-3">
+                {items.map((item: any, idx: number) => {
+                  const product = item.productInfo || {};
+                  const desc = product.description || {};
+                  const total = item.totalAmount || {};
+                  const commission = item.commission || {};
+
+                  return (
+                    <Card key={idx} className="border shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex gap-4">
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center">
+                              <h5 className="font-semibold text-base">
+                                {desc.name}
+                              </h5>
+                              <Badge className={toStatusBadge(status)}>
+                                {status}
+                              </Badge>
+                            </div>
+
+                            <div className="mt-1 grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="font-medium">Price:</span>{" "}
+                                {formatBDT(item.selectedPrice)}
+                              </div>
+                              <div>
+                                <span className="font-medium">Quantity:</span>{" "}
+                                {item.quantity || 1}
+                              </div>
+                              <div>
+                                <span className="font-medium">Sub Total:</span>{" "}
+                                {formatBDT(total.subTotal)}
+                              </div>
+                              <div>
+                                <span className="font-medium">Total:</span>{" "}
+                                {formatBDT(total.total)}
+                              </div>
+                            </div>
+
+                            {/* Commission - ONLY visible in modal */}
+                            {commission && (
+                              <div className="mt-2 grid grid-cols-3 gap-2 text-xs border-t pt-2">
+                                <div>
+                                  <span className="font-medium">Type:</span>{" "}
+                                  {commission.type}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Value:</span>{" "}
+                                  {commission.value}
+                                  {commission.type === "percentage" ? "%" : ""}
+                                </div>
+                                <div>
+                                  <span className="font-medium">Amount:</span>{" "}
+                                  {formatBDT(commission.amount)}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Order Note */}
+            {order.orderNote && (
+              <div className="border-t pt-3">
+                <h4 className="font-semibold mb-1">Order Note</h4>
+                <p>{order.orderNote}</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hidden Print Area */}
+      <div style={{ display: "none" }}>
+        <div ref={printRef}>
+          <div
+            style={{
+              fontFamily: "'Courier New', monospace",
+              fontSize: "12px",
+              width: "80mm",
+              padding: "10px",
+              lineHeight: "1.4",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                textAlign: "center",
+                borderBottom: "2px dashed #000",
+                paddingBottom: "10px",
+                marginBottom: "10px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "18px",
+                  fontWeight: "bold",
+                  textTransform: "uppercase",
+                }}
+              >
+                MILKO
+              </div>
+              <div style={{ fontSize: "10px" }}>
+                Beside Dhaka-Ctg Highway, Fateh pur, Feni Sadar, Feni.
+              </div>
+              <div style={{ fontSize: "10px" }}>Phone: +8801810-185636</div>
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "bold",
+                  margin: "5px 0",
+                }}
+              >
+                *** SALES RECEIPT ***
+              </div>
+              <div style={{ fontSize: "11px" }}>
+                {new Date(order.createdAt).toLocaleString("en-BD", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </div>
+            </div>
+
+            {/* Order Info */}
+            <div style={{ fontSize: "11px", margin: "10px 0" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  margin: "3px 0",
+                }}
+              >
+                <span style={{ fontWeight: "bold" }}>Receipt #:</span>
+                <span>{order._id.slice(-8).toUpperCase()}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  margin: "3px 0",
+                }}
+              >
+                <span style={{ fontWeight: "bold" }}>Customer:</span>
+                <span>
+                  {order.customerInfo.firstName} {order.customerInfo.lastName}
+                </span>
               </div>
               {order.customerInfo.phone && (
-                <div>
-                  <span className="font-medium">Phone:</span>{" "}
-                  {order.customerInfo.phone}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    margin: "3px 0",
+                  }}
+                >
+                  <span style={{ fontWeight: "bold" }}>Phone:</span>
+                  <span>{order.customerInfo.phone}</span>
                 </div>
               )}
-              {order.customerInfo.address && (
-                <div className="col-span-2">
-                  <span className="font-medium">Address:</span>{" "}
-                  {order.customerInfo.address}
-                </div>
-              )}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  margin: "3px 0",
+                }}
+              >
+                <span style={{ fontWeight: "bold" }}>Payment:</span>
+                <span style={{ textTransform: "uppercase" }}>
+                  {order.paymentInfo}
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  margin: "3px 0",
+                }}
+              >
+                <span style={{ fontWeight: "bold" }}>Status:</span>
+                <span>
+                  <span
+                    style={{
+                      padding: "2px 8px",
+                      border: "1px solid #000",
+                      borderRadius: "3px",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {status}
+                  </span>
+                </span>
+              </div>
             </div>
-          </div>
 
-          {/* Product Info */}
-          <div className="border-t pt-3">
-            <h4 className="font-semibold mb-3">Products</h4>
+            <div
+              style={{ borderTop: "2px solid #000", margin: "10px 0" }}
+            ></div>
 
-            <div className="space-y-3">
+            {/* Products */}
+            <div style={{ margin: "10px 0" }}>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  textAlign: "center",
+                  marginBottom: "8px",
+                }}
+              >
+                ITEMS PURCHASED
+              </div>
               {items.map((item: any, idx: number) => {
-                const product = item.productInfo || {};
-                const desc = product.description || {};
+                const desc = item.productInfo?.description || {};
                 const total = item.totalAmount || {};
-                const commission = item.commission || {};
+                const qty = item.quantity || 1;
+                const price = item.selectedPrice;
 
                 return (
-                  <Card key={idx} className="border shadow-sm">
-                    <CardContent className="p-4">
-                      <div className="flex gap-4">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center">
-                            <h5 className="font-semibold text-base">
-                              {desc.name}
-                            </h5>
-                            {/* 3. ✅ Use the correct 'status' variable */}
-                            <Badge className={toStatusBadge(status)}>
-                              {status}
-                            </Badge>
-                          </div>
-
-                          <div className="mt-1 grid grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <span className="font-medium">Price:</span>{" "}
-                              {formatBDT(item.selectedPrice)}
-                            </div>
-                            <div>
-                              <span className="font-medium">Quantity:</span>{" "}
-                              {item.quantity || 1}
-                            </div>
-                            <div>
-                              <span className="font-medium">Sub Total:</span>{" "}
-                              {formatBDT(total.subTotal)}
-                            </div>
-                            <div>
-                              <span className="font-medium">Total:</span>{" "}
-                              {formatBDT(total.total)}
-                            </div>
-                          </div>
-
-                          {/* Commission */}
-                          {commission && (
-                            <div className="mt-2 grid grid-cols-3 gap-2 text-xs border-t pt-2">
-                              <div>
-                                <span className="font-medium">Type:</span>{" "}
-                                {commission.type}
-                              </div>
-                              <div>
-                                <span className="font-medium">Value:</span>{" "}
-                                {commission.value}
-                                {commission.type === "percentage" ? "%" : ""}
-                              </div>
-                              <div>
-                                <span className="font-medium">Amount:</span>{" "}
-                                {formatBDT(commission.amount)}
-                              </div>
-                            </div>
-                          )}
+                  <div key={idx} style={{ marginBottom: "10px" }}>
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        fontSize: "12px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {idx + 1}. {desc.name}
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "11px",
+                      }}
+                    >
+                      <span>
+                        {formatBDT(price)} x {qty}
+                      </span>
+                      <span style={{ fontWeight: "bold" }}>
+                        {formatBDT(total.total)}
+                      </span>
+                    </div>
+                    {total.subTotal !== total.total && (
+                      <div style={{ fontSize: "11px", color: "#333" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <span> Subtotal:</span>
+                          <span>{formatBDT(total.subTotal)}</span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    )}
+                  </div>
                 );
               })}
             </div>
-          </div>
 
-          {/* Order Note */}
-          {order.orderNote && (
-            <div className="border-t pt-3">
-              <h4 className="font-semibold mb-1">Order Note</h4>
-              <p>{order.orderNote}</p>
+            {/* Totals */}
+            <div style={{ borderTop: "2px solid #000", paddingTop: "8px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "12px",
+                  margin: "5px 0",
+                }}
+              >
+                <span>SUBTOTAL:</span>
+                <span>
+                  {formatBDT(
+                    items.reduce(
+                      (s: number, i: any) => s + (i.totalAmount?.subTotal || 0),
+                      0
+                    )
+                  )}
+                </span>
+              </div>
+              {items.some(
+                (i: any) => i.totalAmount?.subTotal !== i.totalAmount?.total
+              ) && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: "12px",
+                    margin: "5px 0",
+                  }}
+                >
+                  <span>ADDITIONAL CHARGES:</span>
+                  <span>
+                    {formatBDT(
+                      order.totalAmount -
+                        items.reduce(
+                          (s: number, i: any) =>
+                            s + (i.totalAmount?.subTotal || 0),
+                          0
+                        ) -
+                        deliveryCharge
+                    )}
+                  </span>
+                </div>
+              )}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "12px",
+                  margin: "5px 0",
+                }}
+              >
+                <span>DELIVERY CHARGE:</span>
+                <span>{formatBDT(deliveryCharge)}</span>
+              </div>
+              <div
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  borderTop: "2px solid #000",
+                  borderBottom: "2px solid #000",
+                  padding: "8px 0",
+                  margin: "8px 0",
+                }}
+              >
+                <div
+                  style={{ display: "flex", justifyContent: "space-between" }}
+                >
+                  <span>TOTAL AMOUNT:</span>
+                  <span>{formatBDT(order.totalAmount + deliveryCharge)}</span>
+                </div>
+              </div>
             </div>
-          )}
+
+            {order.orderNote && (
+              <>
+                <div
+                  style={{ borderTop: "1px dashed #000", margin: "8px 0" }}
+                ></div>
+                <div style={{ fontSize: "11px", margin: "10px 0" }}>
+                  <div style={{ fontWeight: "bold" }}>Note:</div>
+                  <div>{order.orderNote}</div>
+                </div>
+              </>
+            )}
+
+            {/* Footer */}
+            <div
+              style={{
+                textAlign: "center",
+                marginTop: "15px",
+                paddingTop: "10px",
+                borderTop: "2px dashed #000",
+                fontSize: "11px",
+              }}
+            >
+              <div style={{ letterSpacing: "2px", fontSize: "10px" }}>
+                *{order._id.slice(-12).toUpperCase()}*
+              </div>
+              <div
+                style={{
+                  fontWeight: "bold",
+                  marginTop: "10px",
+                  fontSize: "12px",
+                }}
+              >
+                THANK YOU!
+              </div>
+              <div>For any queries, please contact us</div>
+              <div>Keep this receipt for future reference</div>
+            </div>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   );
 }
-
 export default function OrdersTable() {
   const userId = useSelector((state: any) => state.auth.user._id);
   const { data: orders = [], isLoading } = useGetMyOrdersQuery(userId);
-
+  const { data: settingsData } = useGetSettingsQuery();
+  const deliveryCharge = settingsData?.deliveryCharge || 0;
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
   const [sort, setSort] = useState("DATE_DESC");
@@ -465,6 +819,7 @@ export default function OrdersTable() {
       <OrderModal
         order={selectedOrder}
         isOpen={isModalOpen}
+        deliveryCharge={deliveryCharge}
         // 8. ✅ REMOVED the 'orderStatus' prop
         onClose={() => setIsModalOpen(false)}
       />

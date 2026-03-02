@@ -8,24 +8,44 @@ export interface CommissionSummary {
   totalCommission: number;
   averagePercentageRate: number;
   totalSaleAmount: number;
-  totalQuantity:number;
+  totalQuantity: number;
 }
 const orderApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAllOrders: builder.query<Order[], void>({
-      query: () => ({ url: "/order", method: "GET" }),
-      transformResponse: (response: { data: Order[] }) => response.data,
+    getAllOrders: builder.query<{ data: Order[]; meta: { total: number; page: number; limit: number; totalPage: number } }, { page?: number; limit?: number; status?: string; startDate?: string; endDate?: string; userRole?: string; searchTerm?: string }>({
+      query: (params) => ({ 
+        url: "/order", 
+        method: "GET",
+        params 
+      }),
+    }),
+    getOrderStatusCounts: builder.query<Record<string, number>, { startDate?: string; endDate?: string; userRole?: string }>({
+      query: (params) => ({
+        url: "/order/status-counts",
+        method: "GET",
+        params
+      }),
+      transformResponse: (response: { data: Record<string, number> }) => response.data,
     }),
     getSingleOrder: builder.query<Order, string>({
       query: (id) => ({ url: `/order/${id}`, method: "GET" }),
       transformResponse: (response: { data: Order }) => response.data,
     }),
     getOrderSummary: builder.query<
-      { success: boolean; message: string; data: any }, // response type
-      void
+      any,
+      { startDate?: string; endDate?: string }
     >({
-      query: () => ({ url: "/order/summary", method: "GET" }),
-      transformResponse: (response: { success: boolean; message: string; data: any }) => response.data,
+      query: ({ startDate, endDate }) => ({
+        url: "/order/summary",
+        method: "GET",
+        params: { startDate, endDate },
+      }),
+      transformResponse: (response: {
+        success: boolean;
+        message: string;
+        data: any;
+      }) => response.data,
+      keepUnusedDataFor: 0,
     }),
     createOrder: builder.mutation<Order, Partial<Order>>({
       query: (newOrder) => ({
@@ -54,7 +74,6 @@ const orderApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: { data: Order }) => response.data,
     }),
-
     getUserCommissionSummary: builder.query<CommissionSummary, string>({
       query: (userId) => ({
         url: `/order/commission/${userId}`,
@@ -77,6 +96,7 @@ const orderApi = baseApi.injectEndpoints({
 
 export const {
   useGetAllOrdersQuery,
+  useGetOrderStatusCountsQuery,
   useGetSingleOrderQuery,
   useCreateOrderMutation,
   useUpdateOrderMutation,

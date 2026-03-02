@@ -12,7 +12,7 @@ import { selectCurrentUser } from "@/redux/featured/auth/authSlice";
 const CreateWithdrawalForm: React.FC = () => {
   const currentUser = useAppSelector(selectCurrentUser);
   const userId = currentUser?._id;
-  const commissionBalance = currentUser?.commissionBalance || 0; // commission balance
+  const commissionBalance = currentUser?.commissionBalance || 0;
   const [isLoading, setIsLoading] = React.useState(false);
   const [createWithdrawals] = useCreateWithdrawalsMutation();
 
@@ -26,6 +26,7 @@ const CreateWithdrawalForm: React.FC = () => {
     defaultValues: {
       amount: 0,
       paymentMethod: "cash-on",
+      paymentAccountNumber: "",
       description: "",
       note: "",
       status: "pending",
@@ -40,9 +41,10 @@ const CreateWithdrawalForm: React.FC = () => {
       return;
     }
 
-    // ------------------ CLIENT-SIDE BALANCE VALIDATION ------------------
     if (data.amount > commissionBalance) {
-      toast.error("Insufficient balance! You cannot withdraw more than your commission.");
+      toast.error(
+        "Insufficient balance! You cannot withdraw more than your commission."
+      );
       return;
     }
 
@@ -52,14 +54,14 @@ const CreateWithdrawalForm: React.FC = () => {
       const payload: IWithdrawal = {
         user: userId,
         amount: data.amount,
-        paymentMethod: "cash-on",
+        paymentMethod: data.paymentMethod,
+        paymentAccountNumber: data.paymentAccountNumber,
         status: "pending",
         description: data.description,
         note: data.note,
       };
 
       const response = await createWithdrawals(payload).unwrap();
-
       toast.success("Withdrawal request created successfully!");
       reset();
       window.location.href = "/sr/approved-withdrawal";
@@ -85,9 +87,12 @@ const CreateWithdrawalForm: React.FC = () => {
           <div className="inline-flex items-center justify-center w-12 h-12 bg-indigo-600 rounded-lg mb-3">
             <DollarSign className="w-6 h-6 text-white" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Create Withdrawal</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Create Withdrawal
+          </h2>
           <p className="text-gray-600 text-sm mt-1">
-            Available Commission Balance: <strong>৳{commissionBalance}</strong>
+            Available Commission Balance:{" "}
+            <strong>৳{Number(commissionBalance).toFixed(2)}</strong>
           </p>
         </div>
 
@@ -108,7 +113,8 @@ const CreateWithdrawalForm: React.FC = () => {
                   min: { value: 0.01, message: "Amount must be greater than 0!" },
                   valueAsNumber: true,
                   validate: (value) =>
-                    value <= commissionBalance || "Amount exceeds your commission balance",
+                    value <= commissionBalance ||
+                    "Amount exceeds your commission balance",
                 })}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all"
                 placeholder="Enter amount"
@@ -125,13 +131,42 @@ const CreateWithdrawalForm: React.FC = () => {
                 Payment Method
               </label>
               <select
-                {...register("paymentMethod", { required: "Payment method is required!" })}
+                {...register("paymentMethod", {
+                  required: "Payment method is required!",
+                })}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all bg-white"
               >
                 <option value="cash-on">Cash On</option>
+                <option value="bKash">bKash</option>
+                <option value="nagad">Nagad</option>
+                <option value="rocket">Rocket</option>
+                <option value="upay">Upay</option>
               </select>
               {errors.paymentMethod && (
-                <p className="text-red-600 text-sm">{errors.paymentMethod.message}</p>
+                <p className="text-red-600 text-sm">
+                  {errors.paymentMethod.message}
+                </p>
+              )}
+            </div>
+
+            {/* Payment Account Number */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <CreditCard className="w-4 h-4 text-gray-500" />
+                Payment Account Number
+              </label>
+              <input
+                type="text"
+                {...register("paymentAccountNumber", {
+                  required: "Payment account number is required!",
+                })}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all"
+                placeholder="Enter account number"
+              />
+              {errors.paymentAccountNumber && (
+                <p className="text-red-600 text-sm">
+                  {errors.paymentAccountNumber.message}
+                </p>
               )}
             </div>
 
@@ -142,14 +177,11 @@ const CreateWithdrawalForm: React.FC = () => {
                 Description
               </label>
               <textarea
-                {...register("description", { required: "Description is required!" })}
+                {...register("description")}
                 rows={3}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
-                placeholder="Enter description"
+                placeholder="Enter description (optional)"
               />
-              {errors.description && (
-                <p className="text-red-600 text-sm">{errors.description.message}</p>
-              )}
             </div>
 
             {/* Note */}
@@ -159,14 +191,11 @@ const CreateWithdrawalForm: React.FC = () => {
                 Note
               </label>
               <textarea
-                {...register("note", { required: "Note is required!" })}
+                {...register("note")}
                 rows={2}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
-                placeholder="Enter note"
+                placeholder="Enter note (optional)"
               />
-              {errors.note && (
-                <p className="text-red-600 text-sm">{errors.note.message}</p>
-              )}
             </div>
 
             {/* Submit */}

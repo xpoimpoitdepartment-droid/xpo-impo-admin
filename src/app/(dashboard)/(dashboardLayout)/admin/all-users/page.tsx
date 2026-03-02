@@ -24,23 +24,38 @@ import {
 } from "lucide-react";
 import { UserStatCard } from "@/components/shared/userStatCard";
 import { UserFilterBar } from "@/components/shared/UserFilterBar";
-
-import { format } from "date-fns/esm";
+// import { format } from "date-fns/esm";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import {
+  useDeleteUserMutation,
   useGetAllUsersQuery,
   useUpdateUserMutation,
 } from "@/redux/featured/user/userApi";
 
+const USERS_PER_PAGE = 10;
+import Swal from "sweetalert2"; // ✅ for confirmation popup
 const AllUsersPage = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const { data: users = [], isLoading, refetch } = useGetAllUsersQuery();
+  // ✅ Fetch all users once (limit 1000)
+  const {
+    data: users = [],
+    isLoading,
+    refetch,
+  } = useGetAllUsersQuery({
+    page: 1,
+    limit: 1000,
+  });
+
   const [updateUserStatus, { isLoading: updating }] = useUpdateUserMutation();
+  const [deleteUser, { isLoading: deleting }] = useDeleteUserMutation();
 
   if (isLoading) return <p>Loading...</p>;
 
+  // ✅ Local filter (search + status)
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       (user.name?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
@@ -50,22 +65,55 @@ const AllUsersPage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const totalUsers = users.length;
+  // ✅ Local pagination
+  const totalUsers = filteredUsers.length;
+  const totalPages = Math.ceil(totalUsers / USERS_PER_PAGE);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * USERS_PER_PAGE,
+    currentPage * USERS_PER_PAGE
+  );
+
   const activeUsers = users.filter((u) => u.status === "active").length;
   const newThisMonth = users.length;
 
-  // ✅ Function to handle activation
-  const handleActivateUser = async (id: string, email: string) => {
+  const handleToggleStatus = async (
+    id: string,
+    email: string,
+    currentStatus: string
+  ) => {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
     try {
       await updateUserStatus({
-        id, // 👈 user id
-        data: { email, status: "active" }, // 👈 wrapped in data
+        id,
+        data: { email, status: newStatus },
       }).unwrap();
-
-      toast.success(`User ${email} activated successfully!`);
+      toast.success(`User ${email} is now ${newStatus}!`);
       refetch();
     } catch (err: any) {
-      toast.error(err?.data?.message || "Failed to activate user");
+      console.error(err);
+      toast.error(err?.data?.message || "Failed to update user status");
+    }
+  };
+  const handleDeleteUser = async (id: string, email: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: `Delete user ${email}? This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await deleteUser(id).unwrap();
+        toast.success(`User ${email} deleted successfully!`);
+        refetch();
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err?.data?.message || "Failed to delete user");
+      }
     }
   };
 
@@ -75,7 +123,7 @@ const AllUsersPage = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <UserStatCard
           title="All Users"
-          value={String(totalUsers)}
+          value={String(users.length)}
           subtitle="+2 from last week"
           icon={<UserIcon className="h-6 w-6 text-pink-600" />}
         />
@@ -83,7 +131,7 @@ const AllUsersPage = () => {
           title="Active Users"
           value={String(activeUsers)}
           subtitle={`${Math.round(
-            (activeUsers / totalUsers) * 100 || 0
+            (activeUsers / users.length) * 100 || 0
           )}% active rate`}
           icon={<UsersIcon className="h-6 w-6 text-green-600" />}
         />
@@ -104,21 +152,20 @@ const AllUsersPage = () => {
       />
 
       {/* User Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto border rounded-lg">
         <Table>
           <TableHeader>
-            <TableRow className="border border-[#CFCFCF] ">
+            <TableRow className="border border-[#CFCFCF]">
               <TableHead className="text-center">User</TableHead>
               <TableHead className="text-center">Email</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-center">Join Date</TableHead>
               <TableHead className="text-center">Orders</TableHead>
-              <TableHead className="text-center">Wallet Point</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers.map((user, index) => (
+            {paginatedUsers.map((user, index) => (
               <TableRow key={index} className="border-none">
                 <TableCell className="py-4">
                   <div className="flex items-center gap-4">
@@ -126,16 +173,14 @@ const AllUsersPage = () => {
                       {user.name?.charAt(0)}
                     </div>
                     <div>
-                      <div className="font-medium text-center">{user.name}</div>
+                      <div className="font-medium">{user.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {user.role}
+                        {user.role === "sr" ? "Marketing Officer" : user.role}
                       </div>
                     </div>
                   </div>
                 </TableCell>
-
                 <TableCell className="py-4 text-center">{user.email}</TableCell>
-
                 <TableCell className="py-4 text-center">
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -147,21 +192,14 @@ const AllUsersPage = () => {
                     {user.status}
                   </span>
                 </TableCell>
-
                 <TableCell className="py-4 text-center">
                   {user.createdAt
                     ? format(new Date(user.createdAt), "MMM dd, yyyy")
                     : "—"}
                 </TableCell>
-
                 <TableCell className="py-4 text-center">
-                  {user.orders ?? 0}
+                  {user.totalPaidOrders ?? 0}
                 </TableCell>
-
-                <TableCell className="py-4 text-center">
-                  {user.walletPoint ?? 0}
-                </TableCell>
-
                 <TableCell className="py-4 text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -170,20 +208,36 @@ const AllUsersPage = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View</DropdownMenuItem>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      {user.status !== "active" && (
-                        <DropdownMenuItem
-                          onClick={() =>
-                            handleActivateUser(user._id, user.email)
-                          }
-                          disabled={updating}
-                          className="text-green-600"
-                        >
-                          Activate User
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem className="text-red-600">
+                      <DropdownMenuItem
+                        onClick={() =>
+                          user._id && user.email && user.status
+                            ? handleToggleStatus(
+                                user._id,
+                                user.email,
+                                user.status
+                              )
+                            : undefined
+                        }
+                        disabled={updating}
+                        className={`${
+                          user.status === "active"
+                            ? "text-gray-700"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {user.status === "active"
+                          ? "Set Inactive"
+                          : "Activate User"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600"
+                        onClick={() =>
+                          user._id && user.email
+                            ? handleDeleteUser(user._id, user.email)
+                            : undefined
+                        }
+                        disabled={deleting}
+                      >
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -194,6 +248,33 @@ const AllUsersPage = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center space-x-2 mt-4">
+          <Button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+          >
+            Prev
+          </Button>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <Button
+              key={i}
+              variant={currentPage === i + 1 ? "default" : "outline"}
+              onClick={() => setCurrentPage(i + 1)}
+            >
+              {i + 1}
+            </Button>
+          ))}
+          <Button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

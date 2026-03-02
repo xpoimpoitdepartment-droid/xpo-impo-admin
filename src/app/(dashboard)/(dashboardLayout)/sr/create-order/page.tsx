@@ -16,6 +16,7 @@ import { selectCurrentUser } from "@/redux/featured/auth/authSlice";
 import { useCreateOrderMutation } from "@/redux/featured/order/orderApi";
 import { useGetAllProductsQuery } from "@/redux/featured/products/productsApi";
 import { Product } from "@/types/Product";
+import { useGetSettingsQuery } from "@/redux/featured/settings/settingsApi";
 
 const fields = [
   { label: "First Name", placeholder: "John", id: "firstName" },
@@ -48,7 +49,11 @@ const CreateOrder = () => {
     data: products,
     isLoading,
     error,
-  } = useGetAllProductsQuery({ searchTerm });
+  } = useGetAllProductsQuery({
+    searchTerm,
+    page: 1,
+    limit: 50000,
+  });
 
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>(
     []
@@ -57,6 +62,9 @@ const CreateOrder = () => {
   const [payment, setPayment] = useState<PaymentType>({ paymentMethod: "" });
   const [orderNote, setOrderNote] = useState("");
   const [createOrderLoading, setCreateOrderLoading] = useState(false);
+  const { data: settingsData } = useGetSettingsQuery();
+
+  const deliveryCharge = settingsData?.deliveryCharge || 0;
 
   // ✅ handle customer info changes
   const handleChange = (id: string, value: string) => {
@@ -140,14 +148,14 @@ const CreateOrder = () => {
   //
   const orderInfo = allSelectedProducts.map((product) => {
     const subTotal = product.price * product.quantity;
-    const price = product.price
+    const price = product.price;
     const commissionType = product.commission?.type || "fixed";
     const commissionValue = Number(product.commission?.value || 0);
 
     return {
       productInfo: product._id,
       quantity: Number(product.quantity) || 1,
-      selectedPrice:price,
+      selectedPrice: price,
       totalAmount: {
         subTotal,
         discount,
@@ -170,7 +178,6 @@ const CreateOrder = () => {
     (acc, item) => acc + item.totalAmount.total,
     0
   );
-
   const finalOrder = {
     orderBy: currentUser?._id,
     userRole: currentUser?.role,
@@ -185,7 +192,7 @@ const CreateOrder = () => {
       country: "Bangladesh",
     },
     paymentInfo: payment.paymentMethod, // ✅ as string
-    totalAmount: overallTotal,
+    totalAmount: overallTotal
   };
   // ✅ Create order function
   const CreateFinalOrder = async () => {
@@ -277,7 +284,13 @@ const CreateOrder = () => {
           {/* Pass handleSelectPriceType to AddProducts */}
           <AddProducts
             setSearchTerm={setSearchTerm}
-            products={products || []}
+            products={
+              products?.filter(
+                (p) =>
+                  p.productInfo?.quantity > 0 &&
+                  p.description?.status?.toLowerCase() === "publish"
+              ) || []
+            }
             searchTerm={searchTerm}
             selectedProducts={selectedProducts}
             setSelectedProducts={setSelectedProducts}
@@ -293,7 +306,11 @@ const CreateOrder = () => {
 
         <div className="space-y-7 xl:col-span-1">
           <PaymentAndShipping setPaymentAndShipping={setPayment} />
-          <OrderSummary finalOrder={finalOrder} setOrderNote={setOrderNote} />
+          <OrderSummary
+            deliveryCharge={deliveryCharge}
+            finalOrder={finalOrder}
+            setOrderNote={setOrderNote}
+          />
         </div>
       </div>
     </div>

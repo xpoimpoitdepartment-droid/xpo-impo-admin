@@ -11,17 +11,16 @@ interface Props {
   InventoryStatusRefetch: any;
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "In Stock":
-      return "bg-blue-100 text-blue-800";
-    case "Low Stock":
-      return "bg-yellow-100 text-yellow-800";
-    case "Out of Stock":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
+const getStatusColor = (quantity: number) => {
+  if (quantity === 0) return "bg-red-100 text-red-800";
+  if (quantity <= 5) return "bg-yellow-100 text-yellow-800"; // Low stock
+  return "bg-blue-100 text-blue-800"; // In stock
+};
+
+const getStatusText = (quantity: number) => {
+  if (quantity === 0) return "Out of Stock";
+  if (quantity <= 5) return "Low Stock";
+  return "In Stock";
 };
 
 const ProductTable = ({
@@ -48,9 +47,6 @@ const ProductTable = ({
               Stock
             </th>
             <th className="text-left py-3 px-4 font-medium text-gray-600">
-              Min Stock
-            </th>
-            <th className="text-left py-3 px-4 font-medium text-gray-600">
               Status
             </th>
             <th className="text-left py-3 px-4 font-medium text-gray-600">
@@ -64,7 +60,7 @@ const ProductTable = ({
         <tbody>
           {isLoading ? (
             <tr>
-              <td colSpan={8}>Loading...</td>
+              <td colSpan={7}>Loading...</td>
             </tr>
           ) : (
             products.map((product, index) => (
@@ -78,12 +74,15 @@ const ProductTable = ({
                 <td className="py-4 px-4 text-gray-600">
                   {product.productInfo.sku}
                 </td>
-                <td className="py-4 px-4 text-gray-600">---</td>
+                <td className="py-4 px-4 text-gray-600">
+                  {product.brandAndCategories?.categories?.[0]?.name}
+                </td>
                 <td className="py-4 px-4">{product.productInfo.quantity}</td>
-                <td className="py-4 px-4 text-gray-600">---</td>
                 <td className="py-4 px-4">
-                  <Badge className={getStatusColor(product.description.status)}>
-                    {product.description.status}
+                  <Badge
+                    className={getStatusColor(product.productInfo.quantity)}
+                  >
+                    {getStatusText(product.productInfo.quantity)}
                   </Badge>
                 </td>
                 <td className="py-4 px-4 font-medium">

@@ -4,7 +4,8 @@
 import { useState, useEffect, useRef } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { useReactToPrint } from "react-to-print";
-import { CircleChevronUp, CircleChevronDown, Search } from "lucide-react";
+import { CircleChevronUp, CircleChevronDown, Search, ChevronDown } from "lucide-react";
+import toast from "react-hot-toast";
 
 import {
   Table,
@@ -24,6 +25,7 @@ import {
 
 import {
   useGetAllOrdersQuery,
+  useGetOrderStatusCountsQuery,
   useUpdateOrderStatusMutation,
 } from "@/redux/featured/order/orderApi";
 
@@ -55,83 +57,42 @@ const ORDER_STATUSES: OrderStatus[] = [
 ];
 
 const OrderPage = () => {
-  // ✅ FIX 1: Correctly read the data array from the hook.
-  // Your data structure is an array `[...]`, not a nested object.
-  const { data: orderData = [] } = useGetAllOrdersQuery();
-
-  const [updateOrderStatus] = useUpdateOrderStatusMutation();
-
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<OrderStatus>("pending");
   const [searchValue, setSearchValue] = useState("");
-
   const [sortType, setSortType] = useState<"customer" | "sr">("customer");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-
-  const [ordersByStatus, setOrdersByStatus] = useState<
-    Record<OrderStatus, Order[]>
-  >({
-    pending: [],
-    processing: [],
-    "at-local-facility": [],
-    delivered: [],
-    cancelled: [],
-    paid: [],
-  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [confirmModal, setConfirmModal] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
+  const itemsPerPage = 10;
 
   const contentRef = useRef<HTMLDivElement>(null);
   const reactToPrintFn = useReactToPrint({ contentRef });
 
-  // 🔹 Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  // Fetch orders with pagination and filters
+  const { data: orderResponse, isLoading, refetch } = useGetAllOrdersQuery({
+    page: currentPage,
+    limit: itemsPerPage,
+    status: activeTab,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    userRole: sortType === "sr" ? "sr" : undefined,
+    searchTerm: searchValue || undefined,
+  });
 
-  useEffect(() => {
-    if (!orderData || orderData.length === 0) return;
+  // Fetch status counts from whole dataset
+  const { data: statusCounts = {}, refetch: refetchCounts } = useGetOrderStatusCountsQuery({
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    userRole: sortType === "sr" ? "sr" : undefined,
+  });
 
-    const transformOrder = (raw: any): Order => {
-      const userRole = raw.userRole || "customer";
+  const [updateOrderStatus] = useUpdateOrderStatusMutation();
 
-      // ✅ FIX 2: Type-safe status check to fix TypeScript error
-      let orderStatus: OrderStatus = "pending";
-      if (raw.status && ORDER_STATUSES.includes(raw.status)) {
-        orderStatus = raw.status;
-      }
-
-      return {
-        order_id: raw._id,
-        created: new Date(raw.createdAt).toLocaleString(),
-        createdAt: raw.createdAt,
-        customer:
-          `${raw.customerInfo.firstName} ${raw.customerInfo.lastName}`.trim() ||
-          "Unknown",
-        total: raw.totalAmount || 0,
-        status: orderStatus, // Use the validated status
-        userType: userRole === "sr" ? "sr" : "customer",
-      };
-    };
-
-    const transformed = orderData.map(transformOrder);
-
-    const grouped: Record<OrderStatus, Order[]> = {
-      pending: [],
-      processing: [],
-      "at-local-facility": [],
-      delivered: [],
-      cancelled: [],
-      paid: [],
-    };
-
-    // This grouping logic is now safe because `order.status` is guaranteed
-    // to be of type `OrderStatus` by the `transformOrder` function.
-    transformed.forEach((order) => {
-      grouped[order.status].push(order);
-    });
-
-    setOrdersByStatus(grouped);
-  }, [orderData]);
+  const orders = orderResponse?.data || [];
+  const meta = orderResponse?.meta || { total: 0, page: 1, limit: 10, totalPage: 1 };
 
   const handleStatusChange = async (
     orderId: string,
@@ -139,86 +100,23 @@ const OrderPage = () => {
   ) => {
     try {
       await updateOrderStatus({ id: orderId, status: newStatus }).unwrap();
-
-      // Find which status list the order is currently in
-      const currentStatus = Object.keys(ordersByStatus).find((status) =>
-        ordersByStatus[status as OrderStatus].some(
-          (o) => o.order_id === orderId
-        )
-      ) as OrderStatus;
-
-      if (!currentStatus || newStatus === currentStatus) return;
-
-      // Find the order
-      const updatedOrder = ordersByStatus[currentStatus].find(
-        (o) => o.order_id === orderId
-      );
-      if (!updatedOrder) return;
-
-      // Create a new order object with the updated status
-      const newOrder = { ...updatedOrder, status: newStatus };
-
-      // Optimistically update the state
-      const updatedOrdersByStatus = {
-        ...ordersByStatus,
-        // Remove from old status list
-        [currentStatus]: ordersByStatus[currentStatus].filter(
-          (o) => o.order_id !== orderId
-        ),
-        // Add to new status list
-        [newStatus]: [newOrder, ...ordersByStatus[newStatus]],
-      };
-
-      setOrdersByStatus(updatedOrdersByStatus);
+      toast.success(`Order status updated to ${newStatus.replace("-", " ")}!`);
+      refetch();
+      refetchCounts();
       setExpandedOrder(null);
+      setConfirmModal(null);
     } catch (err: any) {
-      console.error(
-        "Failed to update status:",
-        err?.data?.message || err.message
-      );
-      alert("Failed to update status!");
+      toast.error(err?.data?.message || "Failed to update status!");
     }
   };
 
-  // 🔹 Filter orders by SR/Customer + date + search
-  const getFilteredOrders = (status: OrderStatus) => {
-    return (ordersByStatus[status] || [])
-      .filter((item) => {
-        if (sortType === "sr") return item.userType === "sr";
-        return item.userType === "customer";
-      })
-      .filter((item) =>
-        item.order_id.toLowerCase().includes(searchValue.toLowerCase())
-      )
-      .filter((item) => {
-        if (startDate && endDate) {
-          const created = new Date(item.createdAt).getTime();
-          // Adjust start date to be start of the day
-          const start = new Date(startDate).setHours(0, 0, 0, 0);
-          // Adjust end date to be end of the day
-          const end = new Date(endDate).setHours(23, 59, 59, 999);
-          return created >= start && created <= end;
-        }
-        return true;
-      });
-  };
-
-  // 🔹 Pagination logic
-  const filteredOrders = getFilteredOrders(activeTab);
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(
-    startIndex,
-    startIndex + itemsPerPage
-  );
-
   useEffect(() => {
-    setCurrentPage(1); // reset page when filters change
+    setCurrentPage(1);
   }, [activeTab, searchValue, sortType, startDate, endDate]);
 
   return (
     <>
-      {/* 🔹 Top Controls */}
+      {/* Top Controls */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pt-6">
         {/* Search */}
         <div className="relative w-full sm:w-1/3 bg-white">
@@ -317,7 +215,7 @@ const OrderPage = () => {
               value={status}
               className="flex-1 h-[45px] px-4 bg-white text-sm text-center hover:text-violet11 data-[state=active]:text-violet11 data-[state=active]:border-b-2 data-[state=active]:border-violet-500 capitalize"
             >
-              {status.replace("-", " ")} ({getFilteredOrders(status).length})
+              {status.replace("-", " ")} ({statusCounts[status] || 0})
             </Tabs.Trigger>
           ))}
         </Tabs.List>
@@ -328,166 +226,168 @@ const OrderPage = () => {
             value={status}
             className="grow bg-white p-5 rounded-b-md"
           >
-            <div className="overflow-x-auto">
-              <Table className="min-w-[678px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead></TableHead>
-                    <TableHead className="text-gray-400">ORDER ID</TableHead>
-                    <TableHead className="text-gray-400">CREATED</TableHead>
-                    <TableHead className="text-gray-400">CUSTOMER</TableHead>
-                    <TableHead className="text-gray-400">TOTAL</TableHead>
-                    <TableHead className="text-gray-400">STATUS</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {status === activeTab &&
-                    paginatedOrders.map((item) => (
-                      <TableRow key={item.order_id}>
-                        <TableCell className="text-center">
-                          <button
-                            className="rounded-full border p-1 text-gray-500"
-                            onClick={() =>
-                              setExpandedOrder(
-                                expandedOrder === item.order_id
-                                  ? null
-                                  : item.order_id
-                              )
-                            }
-                          >
-                            {expandedOrder === item.order_id ? (
-                              <CircleChevronUp />
-                            ) : (
-                              <CircleChevronDown />
-                            )}
-                          </button>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {item.order_id}
-                        </TableCell>
-                        <TableCell>{item.created}</TableCell>
-                        <TableCell>{item.customer}</TableCell>
-                        <TableCell>৳{item.total}</TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-md capitalize ${
-                                  item.status === "pending"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : item.status === "processing"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : item.status === "at-local-facility"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : item.status === "delivered"
-                                    ? "bg-cyan-100 text-cyan-800"
-                                    : item.status === "paid"
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {item.status.replace("-", " ")}
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              {ORDER_STATUSES.map((statusOption) => (
-                                <DropdownMenuItem
-                                  key={statusOption}
-                                  className="capitalize"
-                                  onSelect={() =>
-                                    handleStatusChange(
-                                      item.order_id,
-                                      statusOption
-                                    )
-                                  }
-                                >
-                                  {statusOption.replace("-", " ")}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+            {isLoading ? (
+              <div className="text-center py-8">Loading...</div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[678px]">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead></TableHead>
+                        <TableHead className="text-gray-400">ORDER ID</TableHead>
+                        <TableHead className="text-gray-400">CREATED</TableHead>
+                        <TableHead className="text-gray-400">CUSTOMER</TableHead>
+                        <TableHead className="text-gray-400">TOTAL</TableHead>
+                        <TableHead className="text-gray-400">STATUS</TableHead>
+                        <TableHead />
                       </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.map((item: any) => (
+                        <TableRow key={item._id}>
+                          <TableCell className="text-center">
+                            <button
+                              className="rounded-full border p-1 text-gray-500"
+                              onClick={() =>
+                                setExpandedOrder(
+                                  expandedOrder === item._id
+                                    ? null
+                                    : item._id
+                                )
+                              }
+                            >
+                              {expandedOrder === item._id ? (
+                                <CircleChevronUp />
+                              ) : (
+                                <CircleChevronDown />
+                              )}
+                            </button>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {item._id}
+                          </TableCell>
+                          <TableCell>{new Date(item.createdAt).toLocaleString()}</TableCell>
+                          <TableCell>{`${item.customerInfo.firstName} ${item.customerInfo.lastName}`.trim()}</TableCell>
+                          <TableCell>৳{item.totalAmount}</TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md capitalize border transition-all ${
+                                    item.status === "pending"
+                                      ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200"
+                                      : item.status === "processing"
+                                      ? "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200"
+                                      : item.status === "at-local-facility"
+                                      ? "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200"
+                                      : item.status === "delivered"
+                                      ? "bg-cyan-100 text-cyan-800 border-cyan-300 hover:bg-cyan-200"
+                                      : item.status === "paid"
+                                      ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
+                                      : "bg-red-100 text-red-800 border-red-300 hover:bg-red-200"
+                                  }`}
+                                >
+                                  {item.status.replace("-", " ")}
+                                  <ChevronDown size={14} />
+                                </button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                {ORDER_STATUSES.map((statusOption) => (
+                                  <DropdownMenuItem
+                                    key={statusOption}
+                                    className="capitalize"
+                                    onSelect={() =>
+                                      setConfirmModal({ orderId: item._id, newStatus: statusOption })
+                                    }
+                                  >
+                                    {statusOption.replace("-", " ")}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
-            {/* 🔹 Pagination */}
-            {status === activeTab && totalPages > 0 && (
-              <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => p - 1)}
-                  className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                  Prev
-                </button>
+                {/* Pagination */}
+                {meta.totalPage > 0 && (
+                  <div className="flex justify-center items-center gap-2 mt-6 flex-wrap">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                      className="px-3 py-1 border rounded disabled:opacity-50"
+                    >
+                      Prev
+                    </button>
 
-                {/* Logic for showing limited page numbers */}
-                {(() => {
-                  const pages = [];
-                  const maxButtons = 5;
-                  let start = Math.max(
-                    1,
-                    currentPage - Math.floor(maxButtons / 2)
-                  );
-                  const end = Math.min(totalPages, start + maxButtons - 1);
+                    {(() => {
+                      const pages = [];
+                      const maxButtons = 5;
+                      let start = Math.max(
+                        1,
+                        currentPage - Math.floor(maxButtons / 2)
+                      );
+                      const end = Math.min(meta.totalPage, start + maxButtons - 1);
 
-                  if (end - start < maxButtons - 1) {
-                    start = Math.max(1, end - maxButtons + 1);
-                  }
+                      if (end - start < maxButtons - 1) {
+                        start = Math.max(1, end - maxButtons + 1);
+                      }
 
-                  if (start > 1) {
-                    pages.push(1);
-                    if (start > 2) pages.push("...");
-                  }
+                      if (start > 1) {
+                        pages.push(1);
+                        if (start > 2) pages.push("...");
+                      }
 
-                  for (let i = start; i <= end; i++) {
-                    pages.push(i);
-                  }
+                      for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                      }
 
-                  if (end < totalPages) {
-                    if (end < totalPages - 1) pages.push("...");
-                    pages.push(totalPages);
-                  }
+                      if (end < meta.totalPage) {
+                        if (end < meta.totalPage - 1) pages.push("...");
+                        pages.push(meta.totalPage);
+                      }
 
-                  return pages.map((num, idx) =>
-                    num === "..." ? (
-                      <span key={idx} className="px-2">
-                        ...
-                      </span>
-                    ) : (
-                      <button
-                        key={num}
-                        onClick={() => setCurrentPage(num as number)}
-                        className={`px-3 py-1 border rounded ${
-                          num === currentPage
-                            ? "bg-violet-500 text-white border-violet-500"
-                            : "bg-white"
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    )
-                  );
-                })()}
+                      return pages.map((num, idx) =>
+                        num === "..." ? (
+                          <span key={idx} className="px-2">
+                            ...
+                          </span>
+                        ) : (
+                          <button
+                            key={num}
+                            onClick={() => setCurrentPage(num as number)}
+                            className={`px-3 py-1 border rounded ${
+                              num === currentPage
+                                ? "bg-violet-500 text-white border-violet-500"
+                                : "bg-white"
+                            }`}
+                          >
+                            {num}
+                          </button>
+                        )
+                      );
+                    })()}
 
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage((p) => p + 1)}
-                  className="px-3 py-1 border rounded disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
+                    <button
+                      disabled={currentPage === meta.totalPage}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                      className="px-3 py-1 border rounded disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </Tabs.Content>
         ))}
       </Tabs.Root>
 
-      {/* 🔹 Expanded Order Modal */}
+      {/* Expanded Order Modal */}
       {expandedOrder && (
         <div className="bg-[#00000085] fixed top-0 left-0 w-[100vw] h-[100vh] flex items-center justify-center z-50">
           <div className="relative bg-white p-6 rounded-xl shadow-2xl w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -507,13 +407,11 @@ const OrderPage = () => {
             </div>
 
             {(() => {
-              // This .find() will now work correctly on the orderData array
-              const rawOrder = orderData.find(
+              const rawOrder = orders.find(
                 (o: any) => o._id === expandedOrder
               );
               if (!rawOrder) return <p>Order not found.</p>;
 
-              // All logic below is correct for your data structure
               return (
                 <div ref={contentRef} className="space-y-6 px-4">
                   {/* Header */}
@@ -633,6 +531,32 @@ const OrderPage = () => {
                 </div>
               );
             })()}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="bg-[#00000085] fixed top-0 left-0 w-[100vw] h-[100vh] flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Confirm Status Change</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to change the order status to <span className="font-semibold capitalize">{confirmModal.newStatus.replace("-", " ")}</span>?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleStatusChange(confirmModal.orderId, confirmModal.newStatus)}
+                className="px-4 py-2 bg-violet-500 text-white rounded-md hover:bg-violet-600 transition-colors"
+              >
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}
