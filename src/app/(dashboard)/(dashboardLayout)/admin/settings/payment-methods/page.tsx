@@ -24,6 +24,7 @@ export default function SettingsTab() {
     upay: { upayLogo: "", upayNumber: "" },
   });
   const [deliveryCharge, setDeliveryCharge] = useState<number>(0);
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState<number>(0);
   const [files, setFiles] = useState<Record<string, File | null>>({});
 
   // Load settings data
@@ -31,6 +32,7 @@ export default function SettingsTab() {
     if (data) {
       if (data.mobileMfs) setMobileMfs(data.mobileMfs);
       if (data.deliveryCharge !== undefined) setDeliveryCharge(data.deliveryCharge);
+      if (data.freeDeliveryThreshold !== undefined) setFreeDeliveryThreshold(data.freeDeliveryThreshold);
     }
   }, [data]);
 
@@ -81,6 +83,7 @@ export default function SettingsTab() {
         });
       } else if (type === "deliveryCharge") {
         formData.append("deliveryCharge", deliveryCharge.toString());
+        formData.append("freeDeliveryThreshold", freeDeliveryThreshold.toString());
       }
 
       // 🔍 Debug (optional)
@@ -95,7 +98,7 @@ export default function SettingsTab() {
         toast.success(
           type === "mobileMfs"
             ? "Mobile MFS updated successfully!"
-            : "Delivery charge updated successfully!"
+            : "Delivery settings updated successfully!"
         );
         // Clear files state after successful upload
         setFiles({});
@@ -189,17 +192,43 @@ export default function SettingsTab() {
       )}
 
       {activeTab === "deliveryCharge" && (
-        <form onSubmit={(e) => handleSubmit(e, "deliveryCharge")} className="flex flex-col gap-4 max-w-sm">
-          <Input
-            type="number"
-            placeholder="Enter delivery charge"
-            value={deliveryCharge}
-            onChange={(e) => setDeliveryCharge(Number(e.target.value))}
-          />
+        <form onSubmit={(e) => handleSubmit(e, "deliveryCharge")} className="flex flex-col gap-4 max-w-md">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Delivery Charge (৳)</label>
+            <Input
+              type="number"
+              placeholder="Enter delivery charge"
+              value={deliveryCharge}
+              onChange={(e) => setDeliveryCharge(Number(e.target.value))}
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Free Delivery Threshold (৳)</label>
+            <Input
+              type="number"
+              placeholder="Enter minimum order amount for free delivery"
+              value={freeDeliveryThreshold}
+              onChange={(e) => setFreeDeliveryThreshold(Number(e.target.value))}
+            />
+            <p className="text-xs text-gray-500">
+              Orders above this amount will get free delivery. Set to 0 to disable free delivery.
+            </p>
+          </div>
+
+          <div className="bg-blue-50 p-3 rounded-md">
+            <h4 className="text-sm font-medium text-blue-800 mb-1">Preview:</h4>
+            <p className="text-xs text-blue-600">
+              • Orders below ৳{freeDeliveryThreshold} → Delivery charge: ৳{deliveryCharge}
+            </p>
+            <p className="text-xs text-blue-600">
+              • Orders ৳{freeDeliveryThreshold} and above → Free delivery
+            </p>
+          </div>
 
           <Button type="submit" disabled={updating}>
             {updating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Delivery Charge
+            Save Delivery Settings
           </Button>
         </form>
       )}
