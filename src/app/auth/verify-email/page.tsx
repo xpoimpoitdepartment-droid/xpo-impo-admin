@@ -20,7 +20,7 @@ import {
 import { ArrowLeft, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 
 const VerifyEmail = () => {
   const [otp, setOtp] = useState("");

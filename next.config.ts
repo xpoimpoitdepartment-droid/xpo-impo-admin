@@ -2,11 +2,10 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ['res.cloudinary.com'],
     remotePatterns: [
       {
-        hostname: '**',
         protocol: 'https',
+        hostname: 'res.cloudinary.com',
       },
       {
         protocol: 'https',
@@ -14,6 +13,7 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  serverExternalPackages: ['redux-persist'],
 };
 
 export default nextConfig;

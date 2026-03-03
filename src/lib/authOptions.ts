@@ -53,6 +53,11 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account }) {
+      // Allow credentials login without email verification check
+      if (account?.provider === "credentials") {
+        return true;
+      }
+      
       if (account?.provider === "google") {
         try {
           const res = await fetch(
