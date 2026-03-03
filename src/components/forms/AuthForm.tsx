@@ -1,8 +1,8 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import InputField from "../shared/InputField";
@@ -32,8 +32,18 @@ export default function AuthForm({ type }: AuthFormProps) {
   } = useForm<FormData>();
   const { handleRegister, handleLogin } = useAuthHandlers();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam) {
+      // Decode the URL-encoded error message
+      const decodedError = decodeURIComponent(errorParam);
+      setError(decodedError);
+    }
+  }, [searchParams]);
 
   const onSubmit = async (data: FormData) => {
     setError("");
@@ -41,8 +51,20 @@ export default function AuthForm({ type }: AuthFormProps) {
       if (type === "register") {
         await handleRegister(data);
       } else {
-        await handleLogin(data);
-        return router.push("/");
+        const result = await signIn("credentials", {
+          email: data.email,
+          password: data.password,
+          redirect: false,
+        });
+        
+        if (result?.error) {
+          setError(result.error);
+          return;
+        }
+        
+        if (result?.ok) {
+          router.push("/");
+        }
       }
     } catch (err: any) {
       setError(err.message || "Something went wrong");

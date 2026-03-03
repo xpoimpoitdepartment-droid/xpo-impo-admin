@@ -1,6 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+
+function normalizeRole(role: unknown) {
+  if (typeof role !== "string") return "sr";
+  const r = role.toLowerCase();
+  return (["admin", "sr", "customer", "vendor"] as const).includes(r as any)
+    ? r
+    : "sr";
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,52 +25,67 @@ export const authOptions: NextAuthOptions = {
       },
 
       async authorize(credentials) {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_API}/auth/login`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: credentials?.email,
-              password: credentials?.password,
-            }),
-            credentials: "include",
+        if (!credentials?.email || !credentials?.password) return null;
+
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_BASE_API}/auth/login`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+              }),
+            }
+          );
+
+          const json: any = await res.json();
+          
+          if (!res.ok) {
+            // Throw error with backend message for pending/blocked users
+            throw new Error(json?.message || "Login failed");
           }
-        );
+          
+          const u = json?.data ?? json?.user ?? json?.result ?? json;
 
-        if (!res.ok) return null;
-        const json = await res.json();
-        if (!json?.data) return null;
+          if (!u?._id && !u?.id) return null;
 
-        return {
-          id: json.data._id,
-          name: json.data.name,
-          email: json.data.email,
-          role: json.data.role,
-          gender: json.data.gender,
-          walletPoint: json.data.walletPoint,
-        };
+          const accessToken = json?.token ?? json?.accessToken ?? null;
+
+          return {
+            id: u._id ?? u.id,
+            name: u.name ?? "",
+            email: u.email ?? "",
+            role: normalizeRole(u.role),
+            gender: u.gender ?? null,
+            walletPoint: u.walletPoint ?? 0,
+            accessToken,
+          } as any;
+        } catch (error: any) {
+          throw new Error(error.message || "Authentication failed");
+        }
       },
     }),
   ],
   pages: {
     signIn: "/auth/login",
+    error: "/auth/login",
   },
   session: {
     strategy: "jwt",
     maxAge: 60 * 60 * 24,
   },
   callbacks: {
-    async signIn({ user, account }) {
-      // Allow credentials login without email verification check
+    async signIn({ user, account }: any) {
       if (account?.provider === "credentials") {
         return true;
       }
-      
+
       if (account?.provider === "google") {
         try {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_BASE_API}/auth/google`,
+            `${process.env.NEXT_PUBLIC_BASE_API}/auth/login/provider`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -70,26 +94,33 @@ export const authOptions: NextAuthOptions = {
                 email: user.email,
                 provider: "google",
               }),
-              credentials: "include",
             }
           );
           const json = await res.json();
 
-          if (res.ok && json.success) {
+          if (!res.ok) {
+            // Backend returned an error - pass it to error page
+            throw new Error(json?.message || "Login failed");
+          }
+
+          if (res.ok && json?.data) {
             user.id = json.data._id;
-            user.role = json.data.role;
-            user.gender = json.data.gender;
-            user.walletPoint = json.data.walletPoint;
+            user.role = normalizeRole(json.data.role);
+            user.gender = json.data.gender ?? null;
+            user.walletPoint = json.data.walletPoint ?? 0;
+            user.accessToken = json?.token ?? null;
             return true;
           }
-        } catch (error) {
           return false;
+        } catch (error: any) {
+          // Redirect to error page with message
+          throw new Error(error.message || "Authentication failed");
         }
       }
       return true;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id;
         token.name = user.name;
@@ -97,16 +128,20 @@ export const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.gender = user.gender;
         token.walletPoint = user.walletPoint;
+        token.accessToken = user.accessToken ?? token.accessToken ?? null;
       }
       return token;
     },
 
-    async session({ session, token }) {
+    async session({ session, token }: any) {
       if (session.user) {
-        session.user.id = token.id;
-        session.user.role = token.role;
-        session.user.gender = token.gender;
-        session.user.walletPoint = token.walletPoint;
+        session.user.id = token.id as string;
+        session.user.name = token.name as string;
+        session.user.email = token.email as string;
+        session.user.role = token.role as string;
+        session.user.gender = token.gender as string;
+        session.user.walletPoint = token.walletPoint as number;
+        (session as any).accessToken = token.accessToken ?? null;
       }
       return session;
     },
