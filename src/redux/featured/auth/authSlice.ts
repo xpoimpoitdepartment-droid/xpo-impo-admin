@@ -11,7 +11,7 @@ type TAuthState = {
 
 const initialState: TAuthState = {
   user: null,
-  token: null
+  token: typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
 };
 
 const authSlice = createSlice({
@@ -19,11 +19,32 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     setUser: (state, action) => {
-      state.user = action.payload;
+      // Handle both direct API response and NextAuth session format
+      if (action.payload.user && action.payload.accessToken) {
+        // Direct API response format
+        state.user = action.payload.user;
+        state.token = action.payload.accessToken;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('accessToken', action.payload.accessToken);
+        }
+      } else {
+        // NextAuth session format or legacy format
+        state.user = action.payload;
+        // Don't overwrite existing token if not provided
+        if (action.payload.accessToken) {
+          state.token = action.payload.accessToken;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('accessToken', action.payload.accessToken);
+          }
+        }
+      }
     },
     logoutUser: (state) => {
       state.user = null;
       state.token = null;
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+      }
     },
   },
 });

@@ -84,7 +84,21 @@ const InventoryManagement = () => {
   return (
     <div className="space-y-6 py-6">
       {/* Add Product Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button 
+          onClick={() => {
+            const link = document.createElement('a');
+            link.href = '/api/v1/product/export/catalog-csv';
+            link.download = 'product-catalog.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }}
+          variant="outline"
+          className="border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white"
+        >
+          Export CSV
+        </Button>
         <Link href={"/admin/add-new-product"}>
           <Button className="bg-gray-800 hover:bg-gray-900 text-white">
             + Add Product

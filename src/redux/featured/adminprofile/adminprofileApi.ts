@@ -16,8 +16,15 @@ const adminprofileApi = baseApi.injectEndpoints({
         method: "GET",
       }),
     }),
+    updateProfile: builder.mutation({
+      query: ({ userId, ...data }) => ({
+        url: `user/${userId}`,
+        method: "PATCH",
+        body: data,
+      }),
+    }),
   }),
 });
 
-export const { useGetAllAdminsQuery, useGetAdminProfileQuery } =
+export const { useGetAllAdminsQuery, useGetAdminProfileQuery, useUpdateProfileMutation } =
   adminprofileApi;

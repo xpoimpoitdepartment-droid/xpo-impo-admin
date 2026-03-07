@@ -181,10 +181,58 @@ const CategoryPage = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    const headers = "id,title,description,availability,condition,price,link,image_link,brand,google_product_category,fb_product_category,quantity_to_sell_on_facebook,sale_price,sale_price_effective_date,item_group_id,gender,color,size,age_group,material,pattern,shipping,shipping_weight,video[0].url,video[0].tag[0],gtin,product_tags[0],product_tags[1],style[0]";
+    
+    const rows = filteredProducts.map((p) => {
+      const fields = [
+        p._id || "",
+        p.description?.name || "",
+        (p.description?.description || "").replace(/<[^>]*>/g, ""),
+        p.productInfo?.quantity > 0 ? "in stock" : "out of stock",
+        "new",
+        `${p.productInfo?.price || 0}.00 BDT`,
+        `https://milkomart.com/product/${p.description?.slug || p._id}`,
+        p.gallery?.[0] || p.featuredImg || "",
+        p.brandAndCategories?.brand?.name || "",
+        p.brandAndCategories?.categories?.[0]?.name || "",
+        p.brandAndCategories?.categories?.[0]?.name || "",
+        p.productInfo?.quantity || 0,
+        `${p.productInfo?.salePrice || 0}.00 BDT`,
+        "2025-01-01T00:00+06:00/2025-12-31T23:59+06:00",
+        `group_${p._id}`,
+        "unisex",
+        "Multi",
+        "Standard",
+        "adult",
+        "Premium Quality",
+        "Solid",
+        "BD::Cash on Delivery:0.00 BDT",
+        "10x10x10 cm",
+        "",
+        "sweet dring",
+        p.productInfo?.sku || "",
+        "sweet dring",
+        "",
+        "Modern"
+      ];
+      return fields.map(f => `"${String(f).replace(/"/g, '""')}"`).join(",");
+    });
+
+    const csv = "\uFEFF" + [headers, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `products-catalog-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-2 md:p-6">
       <div className="w-full space-y-6">
-        <HeaderActions />
+        <HeaderActions onExportCSV={handleExportCSV} />
 
         {CategoriesLoading ? (
           <span>Loading...</span>

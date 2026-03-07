@@ -15,7 +15,12 @@ function SessionSyncComponent({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (session?.user) {
-      dispatch(setUser(session.user));
+      // Handle NextAuth session format
+      const sessionData = {
+        user: session.user,
+        accessToken: (session as any).accessToken || null
+      };
+      dispatch(setUser(sessionData));
     }
   }, [session, dispatch]);
 
