@@ -30,14 +30,14 @@ export default function PasswordChangeForm() {
     <div className="bg-white rounded-xl shadow p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="font-semibold text-lg">Change Password</h2>
-        <a
+        {/* <a
           href="#"
           className="text-sm text-[#6467F2] flex items-center gap-1
         underline underline-offset-4"
         >
           Need help
           <CircleQuestionMark size={18} />
-        </a>
+        </a> */}
       </div>
 
       {fields.map(({ key, label, placeholder }, index) => (
@@ -50,11 +50,11 @@ export default function PasswordChangeForm() {
             onIconClick={() => setShowPassword(!showPassword)}
           />
 
-          {index === 0 && (
+          {/* {index === 0 && (
             <a href="#" className="text-sm text-[#6467F2] block mt-1">
               Forgot Current Password? Click here
             </a>
-          )}
+          )} */}
         </div>
       ))}
       <Button className="w-full"> Save Change</Button>

@@ -30,6 +30,12 @@ const ProfileFormBasicInfo = ({ isViewMode, formData, setFormData }: ProfileForm
     <>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 mt-4">
         <InputField
+          label="Email"
+          value={user?.email || ""}
+          readOnly={true}
+          disabled={true}
+        />
+        <InputField
           label="Name"
           value={formData?.name || user?.name || "Admin"}
           readOnly={isViewMode}

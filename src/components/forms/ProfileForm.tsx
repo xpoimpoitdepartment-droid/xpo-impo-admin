@@ -19,30 +19,33 @@ export default function ProfileForm({ mode = "view", onClose }: ProfileFormProps
   const dispatch = useAppDispatch();
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    gender: user?.gender || 'male',
-    contactNo: user?.contactNo || '',
-    bio: user?.bio || ''
+    name: '',
+    gender: 'male',
+    contactNo: '',
+    bio: ''
   });
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Update formData when user data changes
+  // Update formData when user data is available
   useEffect(() => {
-    if (user) {
+    if (user && !isInitialized) {
       setFormData({
         name: user.name || '',
         gender: user.gender || 'male',
         contactNo: user.contactNo || '',
         bio: user.bio || ''
       });
+      setIsInitialized(true);
     }
-  }, [user]);
+  }, [user, isInitialized]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const userId = user?._id;
       if (!userId) {
-        toast.error('User ID not found');
+        console.error('User object:', user);
+        toast.error('User ID not found. Please login again.');
         return;
       }
       
@@ -52,41 +55,20 @@ export default function ProfileForm({ mode = "view", onClose }: ProfileFormProps
         ...formData
       };
       
-      console.log('Sending update data:', updateData); // Debug log
-      
       const response = await updateProfile(updateData).unwrap();
       
-      console.log('Update response:', response); // Debug log
-      
       if (response.success) {
-        // Fetch fresh user data from /auth/me to get updated profile
-        try {
-          const freshUserData = await fetch(`${process.env.NEXT_PUBLIC_BASE_API}/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            }
-          });
-          const freshUser = await freshUserData.json();
-          
-          if (freshUser.success) {
-            dispatch(setUser({
-              user: freshUser.data,
-              accessToken: localStorage.getItem('accessToken')
-            }));
-          }
-        } catch (error) {
-          // Fallback to local update if fetch fails
-          dispatch(setUser({
-            user: { ...user, ...formData },
-            accessToken: localStorage.getItem('accessToken')
-          }));
-        }
+        // Update Redux with merged data to preserve all fields
+        dispatch(setUser({
+          user: { ...user, ...formData },
+          accessToken: localStorage.getItem('accessToken')
+        }));
         
         toast.success('Profile updated successfully!');
         onClose?.();
       }
     } catch (error: any) {
-      console.error('Update error:', error); // Debug log
+      console.error('Update error:', error);
       toast.error(error?.data?.message || 'Failed to update profile');
     }
   };
