@@ -11,7 +11,7 @@ type TAuthState = {
 
 const initialState: TAuthState = {
   user: null,
-  token: typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+  token: null,
 };
 
 const authSlice = createSlice({

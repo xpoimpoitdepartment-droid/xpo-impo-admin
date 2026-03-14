@@ -14,28 +14,13 @@ function SessionSyncComponent({ children }: { children: ReactNode }) {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    
-    if (token) {
-      fetch(`${process.env.NEXT_PUBLIC_BASE_API}/auth/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          dispatch(setUser({
-            user: data.data,
-            accessToken: token
-          }));
-        }
-      })
-      .catch(error => {
-        console.error('Failed to fetch user data:', error);
-      });
+    if (session?.user) {
+      dispatch(setUser({
+        user: session.user,
+        accessToken: (session as any).accessToken ?? null,
+      }));
     }
-  }, []); // Run only once on mount
+  }, [session, dispatch]);
 
   return <>{children}</>;
 }

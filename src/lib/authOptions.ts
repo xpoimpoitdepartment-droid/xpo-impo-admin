@@ -47,11 +47,11 @@ export const authOptions: NextAuthOptions = {
             throw new Error(json?.message || "Login failed");
           }
           
-          const u = json?.data ?? json?.user ?? json?.result ?? json;
+          const data = json?.data ?? json?.result ?? json;
+          const u = data?.user ?? data;
+          const accessToken = data?.accessToken ?? json?.token ?? json?.accessToken ?? null;
 
           if (!u?._id && !u?.id) return null;
-
-          const accessToken = json?.token ?? json?.accessToken ?? null;
 
           return {
             id: u._id ?? u.id,
