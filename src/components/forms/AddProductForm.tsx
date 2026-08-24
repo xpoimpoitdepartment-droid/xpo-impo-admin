@@ -156,8 +156,15 @@ export default function AddProductForm() {
         );
 
       const cleanDescription = description.replace(/<\/?[^>]+(>|$)/g, "");
+      
+      const sanitizedAttributes = data.attributes?.map(attr => ({
+        ...attr,
+        values: attr.values.map(v => v.trim()).filter(Boolean)
+      }));
+
       const payload = {
         ...data,
+        attributes: sanitizedAttributes,
         description: {
           ...data.description,
           description: cleanDescription,

@@ -32,7 +32,7 @@ export default function VariantManager({ form }: { form: any }) {
     const generate = (idx: number, current: any): any[] => {
       if (idx === attrs.length) return [current];
       const attr = attrs[idx];
-      const values = attr.values || [];
+      const values = (attr.values || []).map((v: string) => v.trim()).filter(Boolean);
       if (values.length === 0) return generate(idx + 1, current);
 
       let res: any[] = [];
@@ -82,9 +82,10 @@ export default function VariantManager({ form }: { form: any }) {
                   <FormControl>
                     <Input
                       placeholder="e.g. S, M, L"
-                      value={field.value?.join(", ") || ""}
+                      value={field.value?.join(",") || ""}
                       onChange={(e) => {
-                        const vals = e.target.value.split(",").map(v => v.trim()).filter(Boolean);
+                        // Keep raw values including empty strings so commas can be typed
+                        const vals = e.target.value.split(",");
                         field.onChange(vals);
                       }}
                     />

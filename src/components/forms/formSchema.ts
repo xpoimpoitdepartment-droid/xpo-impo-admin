@@ -49,15 +49,9 @@ const productInfoZodSchema = z.object({
   sku: z.string({
     error: () => "SKU is required!",
   }),
-  width: z.string({
-    error: () => "Width is required!",
-  }),
-  height: z.string({
-    error: () => "Height is required!",
-  }),
-  length: z.string({
-    error: () => "Length is required!",
-  }),
+  width: z.string().optional(),
+  height: z.string().optional(),
+  length: z.string().optional(),
   isDigital: z.boolean().optional(),
   digital: z.string().optional(),
   isExternal: z.boolean().optional(),
@@ -104,6 +98,8 @@ export const createProductZodSchema = z.object({
   isTopProduct: z.boolean().optional(),
   sortOrder: z.number().optional(),
   relatedProducts: z.array(z.string()).optional(),
+  attributes: z.array(attributeZodSchema).optional(),
+  variants: z.array(variantInfoZodSchema).optional(),
 });
 
 export const updateProductZodSchema = z.object({
@@ -131,6 +127,8 @@ export const updateProductZodSchema = z.object({
   isTopProduct: z.boolean().optional(),
   sortOrder: z.number().optional(),
   relatedProducts: z.array(z.string()).optional(),
+  attributes: z.array(attributeZodSchema).optional(),
+  variants: z.array(variantInfoZodSchema).optional(),
 });
 
 export const createCategoryZodSchema = z.object({
