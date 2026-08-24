@@ -74,7 +74,8 @@ export default function OrderCard() {
     { label: "Customers Orders", value: summary?.customerOrders || 0, icon: <TrendingUp className="w-5 h-5 text-purple-500" /> },
     { label: "Total Sale Amount", value: `${summary?.totalOrderSaleAmount || 0}৳`, icon: <TrendingUp className="w-5 h-5 text-teal-500" /> },
     { label: "Total Pending Sale", value: `${summary?.totalPendingSale || 0}৳`, icon: <TrendingDown className="w-5 h-5 text-red-500" /> },
-    { label: "Total Paid Order Sale", value: `${summary?.totalPaidOrderSaleAmount || 0}৳`, icon: <TrendingUp className="w-5 h-5 text-green-600" /> },
+    { label: "Total Cancelled Value", value: `${summary?.totalCancelledSaleAmount || 0}৳`, icon: <TrendingDown className="w-5 h-5 text-red-600" /> },
+    { label: "Total Delivered Value", value: `${summary?.totalDeliveredSaleAmount || 0}৳`, icon: <TrendingUp className="w-5 h-5 text-green-600" /> },
   ];
 
   return (

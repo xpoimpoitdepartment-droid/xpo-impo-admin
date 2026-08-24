@@ -41,6 +41,7 @@ type CategoryFormValues = {
   subCategories: Option[];
   iconName?: string;
   iconUrl?: string;
+  sortOrder?: number;
 };
 
 type SubCategory = {
@@ -75,6 +76,7 @@ export default function Category({
       subCategories: [],
       iconName: "",
       iconUrl: "",
+      sortOrder: 0,
     },
   });
 
@@ -91,6 +93,7 @@ export default function Category({
         })),
         iconName: editCategory.icon?.name || "",
         iconUrl: editCategory.icon?.url || "",
+        sortOrder: editCategory.sortOrder || 0,
       });
     }
   }, [editCategory, reset]);
@@ -141,6 +144,7 @@ export default function Category({
             : editCategory?.icon?.url || "https://via.placeholder.com/150",
         },
         subCategories: data.subCategories.map((cat: any) => cat.value),
+        sortOrder: data.sortOrder,
       };
       // If editing, retain existing image/banner
       if (type === "edit" && editCategory) {
@@ -230,6 +234,14 @@ export default function Category({
                       <Input
                         placeholder="Category Name"
                         {...register("name", { required: true })}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label>Sort Order</Label>
+                      <Input
+                        type="number"
+                        placeholder="e.g. 1"
+                        {...register("sortOrder", { valueAsNumber: true })}
                       />
                     </div>
                   </div>

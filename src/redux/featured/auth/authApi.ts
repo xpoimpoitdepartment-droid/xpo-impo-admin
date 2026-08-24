@@ -65,6 +65,15 @@ export const authApi = baseApi.injectEndpoints({
         body: data,
       }),
     }),
+    
+    // Impersonate User (for Admin)
+    impersonateUser: builder.mutation({
+      query: (data) => ({
+        url: "/auth/impersonate",
+        method: "POST",
+        body: data,
+      }),
+    }),
 
     // Verify Email (OTP)
     verifyEmail: builder.mutation({
@@ -133,4 +142,5 @@ export const {
   useResetPasswordWithOtpMutation,
   useResetPasswordMutation,
   useGetMeQuery,
+  useImpersonateUserMutation,
 } = authApi;

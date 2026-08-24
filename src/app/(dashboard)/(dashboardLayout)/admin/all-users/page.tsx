@@ -32,6 +32,7 @@ import {
   useGetAllUsersQuery,
   useUpdateUserMutation,
 } from "@/redux/featured/user/userApi";
+import { useImpersonateUserMutation } from "@/redux/featured/auth/authApi";
 
 const USERS_PER_PAGE = 10;
 import Swal from "sweetalert2"; // ✅ for confirmation popup
@@ -52,6 +53,7 @@ const AllUsersPage = () => {
 
   const [updateUserStatus, { isLoading: updating }] = useUpdateUserMutation();
   const [deleteUser, { isLoading: deleting }] = useDeleteUserMutation();
+  const [impersonateUser] = useImpersonateUserMutation();
 
   if (isLoading) return <p>Loading...</p>;
 
@@ -59,7 +61,8 @@ const AllUsersPage = () => {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       (user.name?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-      (user.email?.toLowerCase().includes(search.toLowerCase()) ?? false);
+      (user.email?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
+      (user.contactNo?.includes(search) ?? false);
     const matchesStatus =
       statusFilter === "all" || user.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -114,6 +117,21 @@ const AllUsersPage = () => {
         console.error(err);
         toast.error(err?.data?.message || "Failed to delete user");
       }
+    }
+  };
+
+  const handleImpersonate = async (targetUserId: string) => {
+    try {
+      const res = await impersonateUser({ targetUserId }).unwrap();
+      const token = res.data?.accessToken;
+      if (token) {
+        // Set the token as a cookie that the frontend can read, or pass via query string.
+        // Easiest is to open frontend url and pass token, but frontend needs to set it.
+        const frontendUrl = "http://localhost:3000/api/auth/impersonate?token=" + token;
+        window.open(frontendUrl, "_blank");
+      }
+    } catch (err: any) {
+      toast.error(err?.data?.message || "Failed to login as user");
     }
   };
 
@@ -175,7 +193,7 @@ const AllUsersPage = () => {
                     <div>
                       <div className="font-medium">{user.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {user.role === "sr" ? "Marketing Officer" : user.role}
+                        {user.role === "sr" ? "Entrepreneur" : user.role}
                       </div>
                     </div>
                   </div>
@@ -240,6 +258,14 @@ const AllUsersPage = () => {
                       >
                         Delete
                       </DropdownMenuItem>
+                      {user.role === "sr" && (
+                        <DropdownMenuItem
+                          className="text-blue-600 font-medium"
+                          onClick={() => user._id && handleImpersonate(user._id)}
+                        >
+                          Login as Entrepreneur
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

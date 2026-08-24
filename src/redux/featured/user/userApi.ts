@@ -5,6 +5,8 @@ import { User } from "@/types/User";
 type GetAllUsersParams = {
   page?: number;
   limit?: number;
+  searchTerm?: string;
+  role?: string;
 };
 
 const userApi = baseApi.injectEndpoints({

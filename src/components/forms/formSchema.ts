@@ -41,7 +41,7 @@ const productInfoZodSchema = z.object({
     error: () => "Sale price is required!",
   }),
   wholeSalePrice: z.number({
-    error: () => "Sale price is required!",
+    error: () => "WholeSale price is required!",
   }),
   quantity: z.number({
     error: () => "Quantity is required!",
@@ -68,6 +68,20 @@ const productInfoZodSchema = z.object({
     })
     .optional(),
 });
+
+const attributeZodSchema = z.object({
+  name: z.string(),
+  values: z.array(z.string()),
+});
+
+const variantInfoZodSchema = z.object({
+  attributes: z.record(z.string(), z.string()),
+  price: z.number(),
+  salePrice: z.number(),
+  quantity: z.number(),
+  sku: z.string().optional(),
+  image: z.string().optional(),
+});
 // commission validation
 // Main Product Validation
 export const createProductZodSchema = z.object({
@@ -86,6 +100,10 @@ export const createProductZodSchema = z.object({
     retailType: z.enum(["percentage", "fixed"]),
     retailValue: z.number(),
   }),
+  isFeatured: z.boolean().optional(),
+  isTopProduct: z.boolean().optional(),
+  sortOrder: z.number().optional(),
+  relatedProducts: z.array(z.string()).optional(),
 });
 
 export const updateProductZodSchema = z.object({
@@ -109,6 +127,10 @@ export const updateProductZodSchema = z.object({
     retailType: z.enum(["percentage", "fixed"]),
     retailValue: z.number(),
   }),
+  isFeatured: z.boolean().optional(),
+  isTopProduct: z.boolean().optional(),
+  sortOrder: z.number().optional(),
+  relatedProducts: z.array(z.string()).optional(),
 });
 
 export const createCategoryZodSchema = z.object({

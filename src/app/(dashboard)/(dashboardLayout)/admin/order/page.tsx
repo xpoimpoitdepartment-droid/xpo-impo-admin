@@ -27,6 +27,7 @@ import {
   useGetAllOrdersQuery,
   useGetOrderStatusCountsQuery,
   useUpdateOrderStatusMutation,
+  useGetCustomerOrderStatsQuery,
 } from "@/redux/featured/order/orderApi";
 
 type OrderStatus =
@@ -93,6 +94,13 @@ const OrderPage = () => {
 
   const orders = orderResponse?.data || [];
   const meta = orderResponse?.meta || { total: 0, page: 1, limit: 10, totalPage: 1 };
+
+  const rawOrder = expandedOrder ? orders.find((o: any) => o._id === expandedOrder) : null;
+  const customerPhone = rawOrder?.customerInfo?.phone;
+
+  const { data: customerStats, isFetching: fetchingStats } = useGetCustomerOrderStatsQuery(customerPhone ?? "", {
+    skip: !customerPhone,
+  });
 
   const handleStatusChange = async (
     orderId: string,
@@ -274,19 +282,18 @@ const OrderPage = () => {
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button
-                                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md capitalize border transition-all ${
-                                    item.status === "pending"
+                                  className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md capitalize border transition-all ${item.status === "pending"
                                       ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200"
                                       : item.status === "processing"
-                                      ? "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200"
-                                      : item.status === "at-local-facility"
-                                      ? "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200"
-                                      : item.status === "delivered"
-                                      ? "bg-cyan-100 text-cyan-800 border-cyan-300 hover:bg-cyan-200"
-                                      : item.status === "paid"
-                                      ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
-                                      : "bg-red-100 text-red-800 border-red-300 hover:bg-red-200"
-                                  }`}
+                                        ? "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200"
+                                        : item.status === "at-local-facility"
+                                          ? "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200"
+                                          : item.status === "delivered"
+                                            ? "bg-cyan-100 text-cyan-800 border-cyan-300 hover:bg-cyan-200"
+                                            : item.status === "paid"
+                                              ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
+                                              : "bg-red-100 text-red-800 border-red-300 hover:bg-red-200"
+                                    }`}
                                 >
                                   {item.status.replace("-", " ")}
                                   <ChevronDown size={14} />
@@ -360,11 +367,10 @@ const OrderPage = () => {
                           <button
                             key={num}
                             onClick={() => setCurrentPage(num as number)}
-                            className={`px-3 py-1 border rounded ${
-                              num === currentPage
+                            className={`px-3 py-1 border rounded ${num === currentPage
                                 ? "bg-violet-500 text-white border-violet-500"
                                 : "bg-white"
-                            }`}
+                              }`}
                           >
                             {num}
                           </button>
@@ -407,9 +413,6 @@ const OrderPage = () => {
             </div>
 
             {(() => {
-              const rawOrder = orders.find(
-                (o: any) => o._id === expandedOrder
-              );
               if (!rawOrder) return <p>Order not found.</p>;
 
               return (
@@ -425,6 +428,16 @@ const OrderPage = () => {
                     <p className="text-xs text-gray-500 mt-1">
                       {new Date(rawOrder.createdAt).toLocaleString()}
                     </p>
+                    {customerStats && (
+                      <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-md inline-block">
+                        <p className="text-sm font-bold mb-1">Customer History Check ({customerPhone})</p>
+                        <p className="text-xs">
+                          <span className="font-semibold text-green-700">Delivered: {customerStats.deliveredOrders}</span> |{" "}
+                          <span className="font-semibold text-red-600">Cancelled: {customerStats.cancelledOrders}</span> |{" "}
+                          <span>Total: {customerStats.totalOrders}</span>
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Order By info from root */}
@@ -432,12 +445,12 @@ const OrderPage = () => {
                     <p className="text-sm text-gray-600 capitalize">
                       Order By : {rawOrder.userRole || "Unknown"}
                     </p>
-                  { (rawOrder.orderBy?.name ) &&
+                    {(rawOrder.orderBy?.name) &&
                       <p className="text-sm text-gray-600">
-                      Name : {rawOrder.orderBy?.name || "Unknown"}
-                    </p>
-                  }
-                  { (rawOrder.orderBy?._id) && <p className="text-sm text-gray-600">
+                        Name : {rawOrder.orderBy?.name || "Unknown"}
+                      </p>
+                    }
+                    {(rawOrder.orderBy?._id) && <p className="text-sm text-gray-600">
                       Id: {rawOrder.orderBy?._id || "Unknown"}
                     </p>}
                   </div>
@@ -507,7 +520,10 @@ const OrderPage = () => {
                           {rawOrder?.orderInfo.map((item: any, idx: number) => (
                             <TableRow key={idx}>
                               <TableCell>
-                                {item?.productInfo?.description?.name}
+                                <div>{item?.products?.[0]?.name || item?.productInfo?.description?.name}</div>
+                                {item?.products?.[0]?.variant && (
+                                  <div className="text-xs text-gray-500">{item.products[0].variant}</div>
+                                )}
                               </TableCell>
                               <TableCell>{rawOrder.trackingNumber}</TableCell>
                               <TableCell className="text-right">

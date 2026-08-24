@@ -91,6 +91,12 @@ const orderApi = baseApi.injectEndpoints({
       query: (userId) => ({ url: `/order/my-order/${userId}`, method: "GET" }),
       transformResponse: (response: { data: Order[] }) => response.data,
     }),
+
+    // ✅ Endpoint for getting fraud/blocklist stats
+    getCustomerOrderStats: builder.query<{totalOrders: number, deliveredOrders: number, cancelledOrders: number}, string>({
+      query: (phone) => ({ url: `/order/customer-stats/${phone}`, method: "GET" }),
+      transformResponse: (response: { data: any }) => response.data,
+    }),
   }),
 });
 
@@ -104,4 +110,5 @@ export const {
   useGetMyOrdersQuery, // ✅ added hook
   useGetUserCommissionSummaryQuery, // ✅ must be exported
   useGetOrderSummaryQuery,
+  useGetCustomerOrderStatsQuery,
 } = orderApi;

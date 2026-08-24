@@ -37,7 +37,10 @@ import { useAppDispatch } from "@/redux/hooks";
 import { setTags } from "@/redux/featured/tags/tagsSlice";
 import { setCategories } from "@/redux/featured/categories/categorySlice";
 
-import { useCreateProductMutation } from "@/redux/featured/products/productsApi";
+import {
+  useCreateProductMutation,
+  useGetAllProductsQuery,
+} from "@/redux/featured/products/productsApi";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useGetAllShopsQuery } from "@/redux/featured/shop/shopApi";
@@ -45,6 +48,7 @@ import { useGetAllTagsQuery } from "@/redux/featured/tags/tagsApi";
 import RichTextEditor from "../editor/RichTextEditor";
 import { createProductZodSchema } from "./formSchema";
 import { useGetAllBrandsQuery } from "@/redux/featured/brands/brandsApi";
+import VariantManager from "./VariantManager";
 
 export type Option = {
   value: string;
@@ -70,6 +74,8 @@ export default function AddProductForm() {
     useGetAllTagsQuery(undefined);
   const { data: brands, isLoading: isBrandsLoading } =
     useGetAllBrandsQuery(undefined);
+  const { data: allProducts, isLoading: isProductsLoading } =
+    useGetAllProductsQuery({});
   const { data: shopData, isLoading: isShopDataLoading } =
     useGetAllShopsQuery();
 
@@ -117,6 +123,10 @@ export default function AddProductForm() {
         retailType: "percentage",
         retailValue: 0,
       },
+      isFeatured: false,
+      isTopProduct: false,
+      sortOrder: 0,
+      relatedProducts: [],
     },
   });
 
@@ -173,7 +183,7 @@ export default function AddProductForm() {
       toast.error(errorMessage, { id: submitToast });
     }
   };
-  const onErrors = (errors: any) => {};
+  const onErrors = (errors: any) => { };
 
   useEffect(() => {
     if (tagsData) {
@@ -195,6 +205,13 @@ export default function AddProductForm() {
       value: tag._id,
       label: tag.name,
     })) ?? [];
+
+  const simplifiedProducts: Option[] =
+    allProducts?.map((prod: any) => ({
+      value: prod._id,
+      label: prod.description?.name || "Unnamed Product",
+    })) ?? [];
+
   const validatePrices = (
     override: Partial<ProductFormValues["productInfo"]> = {}
   ) => {
@@ -293,6 +310,31 @@ export default function AddProductForm() {
                   <FormControl>
                     <Input placeholder="Auto-generated slug" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="productType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Product Type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="simple">Simple Product</SelectItem>
+                      <SelectItem value="variable">Variable Product (Attributes & Variations)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -399,6 +441,16 @@ export default function AddProductForm() {
             </div>
           </section>
 
+          {/* Conditional Rendering for Simple / Variable Product */}
+          {form.watch("productType") === "variable" ? (
+            <section className="space-y-4">
+              <h2 className="text-xl font-semibold border-b pb-2">
+                Product Variations
+              </h2>
+              <VariantManager form={form} />
+            </section>
+          ) : null}
+
           {/* Commission Settings */}
           <section className="space-y-4 border p-5 rounded-lg bg-gray-50">
             <h2 className="text-xl font-semibold text-gray-700 border-b pb-2">
@@ -441,7 +493,7 @@ export default function AddProductForm() {
                         type="number"
                         placeholder="Enter value"
                         {...field}
-                        onChange={(e) =>
+                        onChange={(e: any) =>
                           field.onChange(parseFloat(e.target.value) || 0)
                         }
                       />
@@ -863,6 +915,112 @@ export default function AddProductForm() {
                 </FormItem>
               )}
             />
+          </section>
+
+          {/* Related Products */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold border-b pb-2">
+              Related Products
+            </h2>
+            <FormField
+              control={form.control}
+              name="relatedProducts"
+              render={({ field }: { field: any }) => (
+                <FormItem>
+                  <FormLabel>Select Related Products</FormLabel>
+                  <FormControl>
+                    {isProductsLoading ? (
+                      <Input
+                        className="animate-pulse"
+                        placeholder="Loading Products..."
+                      />
+                    ) : (
+                      <MultipleSelector
+                        value={
+                          (field.value || [])
+                            .map((val: string) =>
+                              simplifiedProducts.find(
+                                (opt: Option) => opt.value === val
+                              )
+                            )
+                            .filter(Boolean) as Option[]
+                        }
+                        onChange={(options) =>
+                          field.onChange(options.map((opt) => opt.value))
+                        }
+                        defaultOptions={simplifiedProducts}
+                        placeholder="Select products..."
+                        emptyIndicator={
+                          <p className="text-center text-sm">
+                            No products found.
+                          </p>
+                        }
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </section>
+
+          {/* Additional Features */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold border-b pb-2">
+              Features & Sorting
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="isFeatured"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 rounded-lg border p-3 shadow-sm bg-gray-50">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Featured Product</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isTopProduct"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 rounded-lg border p-3 shadow-sm bg-gray-50">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Top Reviewed</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sortOrder"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sort Order</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="e.g., 1"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value, 10) || 0)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </section>
 
           {/* Action Buttons */}

@@ -55,6 +55,7 @@ import RichTextEditor from "../editor/RichTextEditor";
 import { setProducts } from "@/redux/featured/products/productSlice";
 import { Product } from "@/types/Product";
 import { useGetAllBrandsQuery } from "@/redux/featured/brands/brandsApi";
+import VariantManager from "./VariantManager";
 
 export type Option = {
   value: string;
@@ -97,6 +98,9 @@ export default function EditProductForm({ id }: { id: string }) {
     useGetAllTagsQuery(undefined);
   const { data: brandsu, isLoading: isBrandsLoading } =
     useGetAllBrandsQuery(undefined);
+  useGetAllBrandsQuery(undefined);
+  const { data: allProducts, isLoading: isProductsLoading } =
+    useGetAllProductsQuery({});
   const { data: shopDatau, isLoading: isShopDataLoading } =
     useGetAllShopsQuery();
 
@@ -133,7 +137,7 @@ export default function EditProductForm({ id }: { id: string }) {
 
   useEffect(() => {
     if (isReady) {
-      const product = editableProduct;
+      const product = editableProduct as any;
 
       const defaultValues = {
         shopId: product.shopId,
@@ -154,7 +158,6 @@ export default function EditProductForm({ id }: { id: string }) {
           description: product.description.description,
           status: product.description.status,
         },
-        productType: product.productType,
         productInfo: {
           price: product.productInfo.price,
           salePrice: product.productInfo.salePrice || 0,
@@ -177,10 +180,19 @@ export default function EditProductForm({ id }: { id: string }) {
           retailType: product.commission?.retailType || "percentage",
           retailValue: product.commission?.retailValue ?? 0,
         },
+        isFeatured: product.isFeatured || false,
+        isTopProduct: product.isTopProduct || false,
+        sortOrder: product.sortOrder || 0,
+        relatedProducts: product.relatedProducts
+          ? product.relatedProducts.map((p: any) => p._id || p)
+          : [],
         specifications:
           product?.specifications && product?.specifications.length > 0
             ? product?.specifications
             : [{ key: "", value: "" }],
+        productType: product.productType || "simple",
+        attributes: product.attributes || [],
+        variants: product.variants || [],
       };
       setDescription(product.description.description);
       form.reset(defaultValues as any);
@@ -240,7 +252,7 @@ export default function EditProductForm({ id }: { id: string }) {
     }
   };
 
-  const onErrors = (errors: any) => {};
+  const onErrors = (errors: any) => { };
 
   const simplifiedCategories: Option[] =
     categoriesData?.map((cat: any) => ({
@@ -252,6 +264,12 @@ export default function EditProductForm({ id }: { id: string }) {
     tagsData?.data?.map((tag: any) => ({
       value: tag._id,
       label: tag.name,
+    })) ?? [];
+
+  const simplifiedProducts: Option[] =
+    allProducts?.map((prod: any) => ({
+      value: prod._id,
+      label: prod.description?.name || "Unnamed Product",
     })) ?? [];
 
   if (!isReady) return <FormSkeleton />;
@@ -304,6 +322,31 @@ export default function EditProductForm({ id }: { id: string }) {
                   <FormControl>
                     <Input placeholder="Auto-generated slug" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="productType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Product Type</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select Product Type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="simple">Simple Product</SelectItem>
+                      <SelectItem value="variable">Variable Product (Attributes & Variations)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -946,7 +989,121 @@ export default function EditProductForm({ id }: { id: string }) {
             />
           </div>
 
-          {/* Action Buttons */}
+          {/* Related Products */}
+          <div className="space-y-4 pt-4 border-t">
+            <h2 className="text-xl font-semibold">Related Products</h2>
+            <FormField
+              control={form.control}
+              name="relatedProducts"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Select Related Products</FormLabel>
+                  <FormControl>
+                    {isProductsLoading ? (
+                      <Input
+                        className="animate-pulse"
+                        placeholder="Loading Products..."
+                      />
+                    ) : (
+                      <MultipleSelector
+                        value={
+                          (field.value || [])
+                            .map((val: string) =>
+                              simplifiedProducts.find(
+                                (opt: Option) => opt.value === val
+                              )
+                            )
+                            .filter(Boolean) as Option[]
+                        }
+                        onChange={(options) =>
+                          field.onChange(options.map((opt) => opt.value))
+                        }
+                        defaultOptions={simplifiedProducts}
+                        placeholder="Select products..."
+                        emptyIndicator={
+                          <p className="text-center text-sm">
+                            No products found.
+                          </p>
+                        }
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Additional Features */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold border-b pb-2">
+              Features & Sorting
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="isFeatured"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 rounded-lg border p-3 shadow-sm bg-gray-50">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Featured Product</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="isTopProduct"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 rounded-lg border p-3 shadow-sm bg-gray-50">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Top Reviewed</FormLabel>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sortOrder"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sort Order</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="e.g., 1"
+                        {...field}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value, 10) || 0)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </section>
+
+          {/* Conditional Rendering for Simple / Variable Product */}
+          {form.watch("productType") === "variable" ? (
+            <section className="space-y-4">
+              <h2 className="text-xl font-semibold border-b pb-2">
+                Product Variations
+              </h2>
+              <VariantManager form={form} />
+            </section>
+          ) : null}
+
+          {/* Commission Settings */}
           <div className="md:flex gap-4 pt-4 justify-end">
             <Button
               type="button"
