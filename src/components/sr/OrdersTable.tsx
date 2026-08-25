@@ -22,7 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUpDown, Eye, Printer } from "lucide-react";
+import { ArrowUpDown, Eye, Printer, XCircle } from "lucide-react";
+import { toast } from "sonner";
+import Swal from "sweetalert2";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +32,7 @@ import {
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
-import { useGetMyOrdersQuery } from "@/redux/featured/order/orderApi";
+import { useGetMyOrdersQuery, useUpdateOrderStatusMutation } from "@/redux/featured/order/orderApi";
 import { useGetSettingsQuery } from "@/redux/featured/settings/settingsApi";
 import { useReactToPrint } from "react-to-print";
 
@@ -576,6 +578,28 @@ export default function OrdersTable() {
   const [sort, setSort] = useState("DATE_DESC");
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [updateOrderStatus] = useUpdateOrderStatusMutation();
+
+  const handleCancelOrder = async (orderId: string) => {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "Do you really want to cancel this order?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, cancel it!",
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await updateOrderStatus({ id: orderId, status: "cancelled" }).unwrap();
+        toast.success("Order cancelled successfully!");
+      } catch (err: any) {
+        toast.error(err?.data?.message || "Failed to cancel order");
+      }
+    }
+  };
 
   const filteredOrders = useMemo(() => {
     let result = [...orders];
@@ -740,6 +764,16 @@ export default function OrdersTable() {
                         >
                           <Eye className="size-4" /> View
                         </Button>
+                        {order.status !== "cancelled" && order.status !== "delivered" && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="gap-2 ml-2"
+                            onClick={() => handleCancelOrder(order._id)}
+                          >
+                            <XCircle className="size-4" /> Cancel
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -794,14 +828,26 @@ export default function OrdersTable() {
                   <p className="font-semibold text-green-700">
                     {formatBDT(order.totalAmount)}
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => handleView(order)}
-                  >
-                    <Eye className="size-4" /> View
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => handleView(order)}
+                    >
+                      <Eye className="size-4" /> View
+                    </Button>
+                    {order.status !== "cancelled" && order.status !== "delivered" && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleCancelOrder(order._id)}
+                      >
+                        <XCircle className="size-4" /> Cancel
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

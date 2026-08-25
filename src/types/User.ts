@@ -1,7 +1,7 @@
 export interface User {
   _id: string;
   name: string;
-  email: string;
+  email?: string;
   password: string;
   role?: string;
   gender?: string;
@@ -12,6 +12,12 @@ export interface User {
   walletPoint?: number; 
   createdAt?: string;
   updatedAt?: string;
-  commissionBalance?:number
-  totalPaidOrders:number;
+  commissionBalance?: number;
+  totalPaidOrders: number;
+  address?: {
+    union?: string;
+    thana?: string;
+    upazila?: string;
+    district?: string;
+  };
 }

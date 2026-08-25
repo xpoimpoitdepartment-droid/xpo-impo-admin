@@ -22,10 +22,35 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        contactNo: { label: "Mobile Number", type: "text" },
+        impersonateToken: { label: "Token", type: "text" },
+        impersonateUser: { label: "User JSON", type: "text" },
       },
 
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        // Handle Impersonation Login
+        if (credentials?.impersonateToken && credentials?.impersonateUser) {
+          try {
+            const u = JSON.parse(credentials.impersonateUser);
+            if (!u?._id && !u?.id) return null;
+            return {
+              id: u._id ?? u.id,
+              name: u.name?.firstName ? `${u.name.firstName} ${u.name.lastName}` : (u.name ?? ""),
+              email: u.email ?? "",
+              role: normalizeRole(u.role),
+              gender: u.gender ?? null,
+              walletPoint: u.walletPoint ?? 0,
+              accessToken: credentials.impersonateToken,
+            } as any;
+          } catch (e) {
+            return null;
+          }
+        }
+
+        const email = credentials?.email && credentials.email !== "undefined" ? credentials.email : undefined;
+        const contactNo = credentials?.contactNo && credentials.contactNo !== "undefined" ? credentials.contactNo : undefined;
+
+        if (!credentials?.password || (!email && !contactNo)) return null;
 
         try {
           const res = await fetch(
@@ -34,7 +59,8 @@ export const authOptions: NextAuthOptions = {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                email: credentials.email,
+                email,
+                contactNo,
                 password: credentials.password,
               }),
             }

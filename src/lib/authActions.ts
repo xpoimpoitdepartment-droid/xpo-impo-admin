@@ -75,11 +75,11 @@ export function useAuthHandlers() {
   }) => {
     try {
       const res = await registerUser(data).unwrap();
-      console.log("Registration successful, redirecting to verify-email...");
-      toast.success("Registration successful! Please verify your email.");
+      console.log("Registration successful, redirecting to login...");
+      toast.success("Registration successful! Please login.");
 
-      // Auto-redirect to verify-email page with email parameter
-      router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`);
+      // Redirect to login page instead of verify-email
+      router.push(`/auth/login`);
     } catch (err: any) {
       throw new Error(err?.data?.message || "Registration failed");
     }

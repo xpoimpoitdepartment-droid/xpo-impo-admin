@@ -21,6 +21,11 @@ type FormData = {
   password: string;
   role: string;
   status: string;
+  contactNo?: string;
+  union?: string;
+  thana?: string;
+  upazila?: string;
+  district?: string;
 };
 
 export default function AuthForm({ type }: AuthFormProps) {
@@ -28,6 +33,7 @@ export default function AuthForm({ type }: AuthFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<FormData>();
   const { handleRegister, handleLogin } = useAuthHandlers();
@@ -35,6 +41,8 @@ export default function AuthForm({ type }: AuthFormProps) {
   const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loginType, setLoginType] = useState<"admin" | "sr">("admin");
+  const selectedRole = watch("role");
 
   useEffect(() => {
     const errorParam = searchParams.get("error");
@@ -49,10 +57,26 @@ export default function AuthForm({ type }: AuthFormProps) {
     setError("");
     try {
       if (type === "register") {
-        await handleRegister(data);
+        const payload: any = {
+          name: data.name,
+          email: data.role !== "sr" ? data.email : undefined,
+          password: data.password,
+          role: data.role,
+          contactNo: data.contactNo,
+        };
+        if (data.role === "sr") {
+          payload.address = {
+            union: data.union,
+            thana: data.thana,
+            upazila: data.upazila,
+            district: data.district,
+          };
+        }
+        await handleRegister(payload);
       } else {
         const result = await signIn("credentials", {
-          email: data.email,
+          email: loginType === "admin" ? data.email : undefined,
+          contactNo: loginType === "sr" ? data.contactNo : undefined,
           password: data.password,
           redirect: false,
         });
@@ -116,17 +140,84 @@ export default function AuthForm({ type }: AuthFormProps) {
                   </p>
                 )}
               </div>
+
+              {selectedRole === "sr" && (
+                <>
+                  <InputField
+                    label="Mobile Number"
+                    id="contactNo"
+                    placeholder="Mobile Number"
+                    register={register("contactNo", { required: "Mobile number required" })}
+                    error={errors.contactNo && "Mobile number is required"}
+                  />
+                  <InputField
+                    label="Union"
+                    id="union"
+                    placeholder="Union Name"
+                    register={register("union", { required: "Union required" })}
+                    error={errors.union && "Union is required"}
+                  />
+                  <InputField
+                    label="Thana"
+                    id="thana"
+                    placeholder="Thana Name"
+                    register={register("thana", { required: "Thana required" })}
+                    error={errors.thana && "Thana is required"}
+                  />
+                  <InputField
+                    label="Upazila"
+                    id="upazila"
+                    placeholder="Upazila Name"
+                    register={register("upazila", { required: "Upazila required" })}
+                    error={errors.upazila && "Upazila is required"}
+                  />
+                  <InputField
+                    label="District"
+                    id="district"
+                    placeholder="District Name"
+                    register={register("district", { required: "District required" })}
+                    error={errors.district && "District is required"}
+                  />
+                </>
+              )}
             </>
           )}
 
-          <InputField
-            label="Email"
-            id="email"
-            type="email"
-            placeholder="Email"
-            register={register("email", { required: true })}
-            error={errors.email && "Email is required"}
-          />
+          {type === "login" && (
+            <div className="flex flex-col gap-1 mb-2">
+              <label className="text-sm font-medium text-gray-700">Login As</label>
+              <select
+                value={loginType}
+                onChange={(e) => setLoginType(e.target.value as "admin" | "sr")}
+                className="border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+              >
+                <option value="admin">Admin</option>
+                <option value="sr">Entrepreneur</option>
+              </select>
+            </div>
+          )}
+
+          {((type === "register" && selectedRole !== "sr") || (type === "login" && loginType === "admin")) && (
+            <InputField
+              label="Email"
+              id="email"
+              type="email"
+              placeholder="Email"
+              register={register("email", { required: "Email is required" })}
+              error={errors.email?.message}
+            />
+          )}
+
+          {type === "login" && loginType === "sr" && (
+            <InputField
+              label="Mobile Number"
+              id="contactNo"
+              type="text"
+              placeholder="Mobile Number"
+              register={register("contactNo", { required: "Mobile number is required" })}
+              error={errors.contactNo?.message}
+            />
+          )}
 
           <div className="relative">
             <InputField

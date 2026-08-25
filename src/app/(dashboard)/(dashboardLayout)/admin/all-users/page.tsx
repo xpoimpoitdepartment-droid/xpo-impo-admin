@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import {
   Table,
   TableBody,
@@ -81,26 +82,26 @@ console.log(users)
 
   const handleToggleStatus = async (
     id: string,
-    email: string,
-    currentStatus: string
+    email: string | undefined,
+    currentStatus: string | undefined
   ) => {
-    const newStatus = currentStatus === "active" ? "inactive" : "active";
     try {
+      const newStatus = currentStatus === "active" ? "pending" : "active";
       await updateUserStatus({
         id,
         data: { email, status: newStatus },
       }).unwrap();
-      toast.success(`User ${email} is now ${newStatus}!`);
+      toast.success(`User ${email || id} is now ${newStatus}!`);
       refetch();
     } catch (err: any) {
       console.error(err);
       toast.error(err?.data?.message || "Failed to update user status");
     }
   };
-  const handleDeleteUser = async (id: string, email: string) => {
+  const handleDeleteUser = async (id: string, email: string | undefined) => {
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: `Delete user ${email}? This action cannot be undone.`,
+      text: `Delete user ${email || id}? This action cannot be undone.`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -111,7 +112,7 @@ console.log(users)
     if (result.isConfirmed) {
       try {
         await deleteUser(id).unwrap();
-        toast.success(`User ${email} deleted successfully!`);
+        toast.success(`User ${email || id} deleted successfully!`);
         refetch();
       } catch (err: any) {
         console.error(err);
@@ -124,11 +125,20 @@ console.log(users)
     try {
       const res = await impersonateUser({ targetUserId }).unwrap();
       const token = res.data?.accessToken;
-      if (token) {
-        // Set the token as a cookie that the frontend can read, or pass via query string.
-        // Easiest is to open frontend url and pass token, but frontend needs to set it.
-        const frontendUrl = "http://localhost:3000/api/auth/impersonate?token=" + token;
-        window.open(frontendUrl, "_blank");
+      const user = res.data?.user;
+      if (token && user) {
+        const result = await signIn("credentials", {
+          impersonateToken: token,
+          impersonateUser: JSON.stringify(user),
+          redirect: false,
+        });
+
+        if (result?.ok) {
+          toast.success(`Logged in as ${user.name?.firstName || "Entrepreneur"}`);
+          window.location.href = "/";
+        } else {
+          toast.error("Failed to impersonate");
+        }
       }
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to login as user");
@@ -193,8 +203,16 @@ console.log(users)
                     <div>
                       <div className="font-medium">{user.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {user.role === "sr" ? "Entrepreneur" : user.role}
+                        {user.role === "sr" ? "উদ্যোক্তা" : user.role}
                       </div>
+                      {user.role === "sr" && user.address && (
+                        <div className="text-[11px] text-gray-500 mt-1 max-w-[200px]">
+                          <div>Mobile: {user.contactNo || "N/A"}</div>
+                          <div>
+                            Address: {[user.address.union, user.address.upazila, user.address.thana, user.address.district].filter(Boolean).join(", ")}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </TableCell>
@@ -228,7 +246,7 @@ console.log(users)
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
                         onClick={() =>
-                          user._id && user.email && user.status
+                          user._id
                             ? handleToggleStatus(
                                 user._id,
                                 user.email,
@@ -250,7 +268,7 @@ console.log(users)
                       <DropdownMenuItem
                         className="text-red-600"
                         onClick={() =>
-                          user._id && user.email
+                          user._id
                             ? handleDeleteUser(user._id, user.email)
                             : undefined
                         }
