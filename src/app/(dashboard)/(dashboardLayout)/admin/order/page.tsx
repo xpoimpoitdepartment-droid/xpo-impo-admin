@@ -487,9 +487,9 @@ const OrderPage = () => {
                           <span className="font-semibold">Method:</span>{" "}
                           {rawOrder.paymentInfo}
                         </p>
-                        <p>
-                          <span className="font-semibold">Total:</span> ৳
-                          {rawOrder.totalAmount}
+                        <p className="text-lg mt-2">
+                          <span className="font-semibold">Total:</span>{" "}
+                          <span className="font-bold text-xl">৳{rawOrder.totalAmount}</span>
                         </p>
                       </div>
                     </div>
@@ -500,8 +500,8 @@ const OrderPage = () => {
                     <h3 className="font-bold mb-3 uppercase text-sm border-b pb-2">
                       Order Items
                     </h3>
-                    <div className="overflow-x-auto">
-                      <Table className="min-w-[600px]">
+                    <div className="overflow-x-auto print:overflow-hidden">
+                      <Table className="min-w-[600px] print:min-w-full">
                         <TableHeader>
                           <TableRow>
                             <TableHead className="font-bold">Product</TableHead>
@@ -522,7 +522,9 @@ const OrderPage = () => {
                               <TableCell>
                                 <div>{item?.products?.[0]?.name || item?.productInfo?.description?.name}</div>
                                 {item?.products?.[0]?.variant && (
-                                  <div className="text-xs text-gray-500">{item.products[0].variant}</div>
+                                  <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                                    {item.products[0].variant}
+                                  </span>
                                 )}
                               </TableCell>
                               <TableCell>{rawOrder.trackingNumber}</TableCell>

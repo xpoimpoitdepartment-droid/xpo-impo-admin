@@ -50,7 +50,7 @@ const AllUsersPage = () => {
     page: 1,
     limit: 1000,
   });
-
+console.log(users)
   const [updateUserStatus, { isLoading: updating }] = useUpdateUserMutation();
   const [deleteUser, { isLoading: deleting }] = useDeleteUserMutation();
   const [impersonateUser] = useImpersonateUserMutation();
