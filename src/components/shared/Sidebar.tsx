@@ -101,12 +101,12 @@ export function AppSidebar({
     role === "admin"
       ? "/admin"
       : role === "sr"
-      ? "/sr"
-      : role === "vendor"
-      ? "/vendor"
-      : role === "customer"
-      ? "/customer"
-      : "/";
+        ? "/sr"
+        : role === "vendor"
+          ? "/vendor"
+          : role === "customer"
+            ? "/customer"
+            : "/";
 
   // Admin/Vendor navigation model (unchanged)
   const navigationItems = useMemo(
@@ -178,11 +178,11 @@ export function AppSidebar({
           label: "Orders",
           href: "/admin/order",
         },
-        // {
-        //   icon: ArrowRightLeft as IconRenderer,
-        //   label: "Transactions",
-        //   href: "/admin/transaction",
-        // },
+        {
+          icon: Shield as IconRenderer,
+          label: "Blocklist",
+          href: "/admin/blocklist",
+        },
       ],
       settingManagement: [
         {
@@ -206,7 +206,7 @@ export function AppSidebar({
           href: "/admin/settings/payment-methods",
         },
       ],
-       // -------- Courier Management (Separate Section) --------
+      // -------- Courier Management (Separate Section) --------
       courierManagement: [
         {
           icon: Truck as IconRenderer,
@@ -251,13 +251,13 @@ export function AppSidebar({
     label: string;
     href: string;
   }> = [
-    { icon: ShoppingCart as IconRenderer, label: "Orders", href: "/sr/orders" },
-    {
-      icon: Plus as IconRenderer,
-      label: "Create Order",
-      href: "/sr/create-order",
-    },
-  ];
+      { icon: ShoppingCart as IconRenderer, label: "Orders", href: "/sr/orders" },
+      {
+        icon: Plus as IconRenderer,
+        label: "Create Order",
+        href: "/sr/create-order",
+      },
+    ];
 
   const srWalletItems = [
     {

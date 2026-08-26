@@ -28,6 +28,8 @@ import {
   useGetOrderStatusCountsQuery,
   useUpdateOrderStatusMutation,
   useGetCustomerOrderStatsQuery,
+  useBlockCustomerPhoneMutation,
+  useGetBlockedPhonesQuery,
 } from "@/redux/featured/order/orderApi";
 
 type OrderStatus =
@@ -67,6 +69,7 @@ const OrderPage = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmModal, setConfirmModal] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
+  const [blockConfirmModal, setBlockConfirmModal] = useState<string | null>(null);
   const itemsPerPage = 10;
 
   const contentRef = useRef<HTMLDivElement>(null);
@@ -91,6 +94,7 @@ const OrderPage = () => {
   });
 
   const [updateOrderStatus] = useUpdateOrderStatusMutation();
+  const [blockPhoneMutation, { isLoading: isBlocking }] = useBlockCustomerPhoneMutation();
 
   const orders = orderResponse?.data || [];
   const meta = orderResponse?.meta || { total: 0, page: 1, limit: 10, totalPage: 1 };
@@ -101,6 +105,9 @@ const OrderPage = () => {
   const { data: customerStats, isFetching: fetchingStats } = useGetCustomerOrderStatsQuery(customerPhone ?? "", {
     skip: !customerPhone,
   });
+
+  const { data: blockedPhones = [] } = useGetBlockedPhonesQuery();
+  const isCurrentlyBlocked = blockedPhones.some((b: any) => b.phone === customerPhone);
 
   const handleStatusChange = async (
     orderId: string,
@@ -115,6 +122,16 @@ const OrderPage = () => {
       setConfirmModal(null);
     } catch (err: any) {
       toast.error(err?.data?.message || "Failed to update status!");
+    }
+  };
+
+  const handleBlockPhone = async (phone: string) => {
+    try {
+      await blockPhoneMutation(phone).unwrap();
+      toast.success(`Phone number ${phone} blocked successfully!`);
+      setBlockConfirmModal(null);
+    } catch (err: any) {
+      toast.error("Failed to block phone number!");
     }
   };
 
@@ -433,12 +450,32 @@ const OrderPage = () => {
                     </p>
                     {customerStats && (
                       <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-md inline-block">
-                        <p className="text-sm font-bold mb-1">Customer History Check ({customerPhone})</p>
-                        <p className="text-xs">
-                          <span className="font-semibold text-green-700">Delivered: {customerStats.deliveredOrders}</span> |{" "}
-                          <span className="font-semibold text-red-600">Cancelled: {customerStats.cancelledOrders}</span> |{" "}
-                          <span>Total: {customerStats.totalOrders}</span>
-                        </p>
+                        <div className="flex items-center gap-4">
+                          <div>
+                            <p className="text-sm font-bold mb-1">Customer History Check ({customerPhone})</p>
+                            <p className="text-xs">
+                              <span className="font-semibold text-green-700">Delivered: {customerStats.deliveredOrders}</span> |{" "}
+                              <span className="font-semibold text-red-600">Cancelled: {customerStats.cancelledOrders}</span> |{" "}
+                              <span>Total: {customerStats.totalOrders}</span>
+                            </p>
+                          </div>
+
+                          {isCurrentlyBlocked ? (
+                            <button
+                              disabled
+                              className="bg-gray-400 text-white px-3 py-1 text-xs rounded no-print cursor-not-allowed"
+                            >
+                              Blocked
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => customerPhone && setBlockConfirmModal(customerPhone)}
+                              className="bg-red-600 text-white px-3 py-1 text-xs rounded hover:bg-red-700 no-print"
+                            >
+                              Block Number
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -576,6 +613,35 @@ const OrderPage = () => {
                 className="px-4 py-2 bg-violet-500 text-white rounded-md hover:bg-violet-600 transition-colors"
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block Confirmation Modal */}
+      {blockConfirmModal && (
+        <div className="bg-[#00000085] fixed top-0 left-0 w-[100vw] h-[100vh] flex items-center justify-center z-[60]">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-3 text-red-600">Block Phone Number</h3>
+            <p className="text-gray-700 mb-6 font-medium">
+              Are you sure you want to block <span className="font-bold text-red-600">{blockConfirmModal}</span>? <br /><br />
+              <span className="text-sm text-gray-500 font-normal">This customer will not be able to place any future orders on the website.</span>
+            </p>
+            <div className="flex gap-3 justify-end mt-2">
+              <button
+                onClick={() => setBlockConfirmModal(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 font-medium transition-colors"
+                disabled={isBlocking}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleBlockPhone(blockConfirmModal)}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium transition-colors"
+                disabled={isBlocking}
+              >
+                {isBlocking ? "Blocking..." : "Yes, Block"}
               </button>
             </div>
           </div>

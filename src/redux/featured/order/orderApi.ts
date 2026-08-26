@@ -97,6 +97,30 @@ const orderApi = baseApi.injectEndpoints({
       query: (phone) => ({ url: `/order/customer-stats/${phone}`, method: "GET" }),
       transformResponse: (response: { data: any }) => response.data,
     }),
+    // ✅ Endpoint for block phone
+    blockCustomerPhone: builder.mutation<any, string>({
+      query: (phone) => ({
+        url: `/order/block-phone`,
+        method: "POST",
+        body: { phone },
+      }),
+      invalidatesTags: ["Blocklist" as any]
+    }),
+    getBlockedPhones: builder.query<any[], void>({
+      query: () => ({
+        url: `/order/block-phone`,
+        method: "GET",
+      }),
+      transformResponse: (response: { data: any[] }) => response.data,
+      providesTags: ["Blocklist" as any],
+    }),
+    unblockPhone: builder.mutation<any, string>({
+      query: (phone) => ({
+        url: `/order/block-phone/${phone}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Blocklist" as any],
+    }),
   }),
 });
 
@@ -111,4 +135,7 @@ export const {
   useGetUserCommissionSummaryQuery, // ✅ must be exported
   useGetOrderSummaryQuery,
   useGetCustomerOrderStatsQuery,
+  useBlockCustomerPhoneMutation,
+  useGetBlockedPhonesQuery,
+  useUnblockPhoneMutation,
 } = orderApi;
