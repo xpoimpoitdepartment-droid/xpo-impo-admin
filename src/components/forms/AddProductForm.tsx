@@ -49,6 +49,7 @@ import RichTextEditor from "../editor/RichTextEditor";
 import { createProductZodSchema } from "./formSchema";
 import { useGetAllBrandsQuery } from "@/redux/featured/brands/brandsApi";
 import VariantManager from "./VariantManager";
+import { FeaturesManager, CareInstructionsManager } from "./DynamicFieldsManager";
 
 export type Option = {
   value: string;
@@ -127,6 +128,9 @@ export default function AddProductForm() {
       isTopProduct: false,
       sortOrder: 0,
       relatedProducts: [],
+      productHighlights: [],
+      featuresAndBenefits: [],
+      careInstructions: [],
     },
   });
 
@@ -156,7 +160,7 @@ export default function AddProductForm() {
         );
 
       const cleanDescription = description.replace(/<\/?[^>]+(>|$)/g, "");
-      
+
       const sanitizedAttributes = data.attributes?.map(attr => ({
         ...attr,
         values: attr.values.map(v => v.trim()).filter(Boolean)
@@ -164,6 +168,9 @@ export default function AddProductForm() {
 
       const payload = {
         ...data,
+        productHighlights: data.productHighlights || [],
+        featuresAndBenefits: data.featuresAndBenefits || [],
+        careInstructions: data.careInstructions || [],
         attributes: sanitizedAttributes,
         description: {
           ...data.description,
@@ -804,6 +811,18 @@ export default function AddProductForm() {
             >
               + Add Specification
             </Button>
+          </section>
+
+          {/* Dynamic Marketing Content */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold border-b pb-2">
+              Features & Highlights
+            </h2>
+            <div className="space-y-6">
+              <FeaturesManager form={form} name="productHighlights" label="Product Highlights (Top Section)" />
+              <FeaturesManager form={form} name="featuresAndBenefits" label="Features & Benefits" />
+              <CareInstructionsManager form={form} name="careInstructions" label="Care Instructions" />
+            </div>
           </section>
         </div>
 

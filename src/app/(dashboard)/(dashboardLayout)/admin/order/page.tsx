@@ -130,7 +130,7 @@ const OrderPage = () => {
         <div className="relative w-full sm:w-1/3 bg-white">
           <input
             type="text"
-            placeholder="Search by order id"
+            placeholder="Search by order id, customer name or phone number"
             className="w-full rounded-md px-4 py-2 text-sm"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
@@ -276,23 +276,26 @@ const OrderPage = () => {
                             {item._id}
                           </TableCell>
                           <TableCell>{new Date(item.createdAt).toLocaleString()}</TableCell>
-                          <TableCell>{`${item.customerInfo.firstName} ${item.customerInfo.lastName}`.trim()}</TableCell>
+                          <TableCell>
+                            <div>{`${item.customerInfo.firstName} ${item.customerInfo.lastName}`.trim()}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{item.customerInfo.phone}</div>
+                          </TableCell>
                           <TableCell>৳{item.totalAmount}</TableCell>
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button
                                   className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-md capitalize border transition-all ${item.status === "pending"
-                                      ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200"
-                                      : item.status === "processing"
-                                        ? "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200"
-                                        : item.status === "at-local-facility"
-                                          ? "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200"
-                                          : item.status === "delivered"
-                                            ? "bg-cyan-100 text-cyan-800 border-cyan-300 hover:bg-cyan-200"
-                                            : item.status === "paid"
-                                              ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
-                                              : "bg-red-100 text-red-800 border-red-300 hover:bg-red-200"
+                                    ? "bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200"
+                                    : item.status === "processing"
+                                      ? "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200"
+                                      : item.status === "at-local-facility"
+                                        ? "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200"
+                                        : item.status === "delivered"
+                                          ? "bg-cyan-100 text-cyan-800 border-cyan-300 hover:bg-cyan-200"
+                                          : item.status === "paid"
+                                            ? "bg-green-100 text-green-800 border-green-300 hover:bg-green-200"
+                                            : "bg-red-100 text-red-800 border-red-300 hover:bg-red-200"
                                     }`}
                                 >
                                   {item.status.replace("-", " ")}
@@ -368,8 +371,8 @@ const OrderPage = () => {
                             key={num}
                             onClick={() => setCurrentPage(num as number)}
                             className={`px-3 py-1 border rounded ${num === currentPage
-                                ? "bg-violet-500 text-white border-violet-500"
-                                : "bg-white"
+                              ? "bg-violet-500 text-white border-violet-500"
+                              : "bg-white"
                               }`}
                           >
                             {num}

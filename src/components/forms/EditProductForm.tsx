@@ -56,6 +56,7 @@ import { setProducts } from "@/redux/featured/products/productSlice";
 import { Product } from "@/types/Product";
 import { useGetAllBrandsQuery } from "@/redux/featured/brands/brandsApi";
 import VariantManager from "./VariantManager";
+import { FeaturesManager, CareInstructionsManager } from "./DynamicFieldsManager";
 
 export type Option = {
   value: string;
@@ -193,6 +194,9 @@ export default function EditProductForm({ id }: { id: string }) {
         productType: product.productType || "simple",
         attributes: product.attributes || [],
         variants: product.variants || [],
+        productHighlights: product.productHighlights || [],
+        featuresAndBenefits: product.featuresAndBenefits || [],
+        careInstructions: product.careInstructions || [],
       };
       setDescription(product.description.description);
       form.reset(defaultValues as any);
@@ -223,6 +227,9 @@ export default function EditProductForm({ id }: { id: string }) {
 
       const newFormData = {
         ...data,
+        productHighlights: data.productHighlights || [],
+        featuresAndBenefits: data.featuresAndBenefits || [],
+        careInstructions: data.careInstructions || [],
         deletedImages: deletedImages,
         description: {
           ...data.description,
@@ -230,6 +237,8 @@ export default function EditProductForm({ id }: { id: string }) {
           status: data.productInfo.status,
         },
       };
+
+      console.log("PAYLOAD BEING SENT:", newFormData);
 
       if (newFormData) {
         formData.append("data", JSON.stringify(newFormData));
@@ -834,6 +843,16 @@ export default function EditProductForm({ id }: { id: string }) {
             >
               + Add Specification
             </Button>
+          </div>
+
+          {/* Dynamic Marketing Content */}
+          <div className="space-y-4 pt-4 border-t">
+            <h2 className="text-xl font-semibold">Features & Highlights</h2>
+            <div className="space-y-6">
+              <FeaturesManager form={form} name="productHighlights" label="Product Highlights (Top Section)" />
+              <FeaturesManager form={form} name="featuresAndBenefits" label="Features & Benefits" />
+              <CareInstructionsManager form={form} name="careInstructions" label="Care Instructions" />
+            </div>
           </div>
         </div>
 
