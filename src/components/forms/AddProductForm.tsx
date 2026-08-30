@@ -80,7 +80,7 @@ export default function AddProductForm() {
     useGetPaginatedAdminProductsQuery({ limit: productsLimit });
   const allProducts = allProductsResp?.data || [];
   const hasMoreProducts = allProductsResp?.meta?.total > allProducts.length;
-  const { data: shopData, isLoading: isShopDataLoading } =
+  const { } =
     useGetAllShopsQuery();
 
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
