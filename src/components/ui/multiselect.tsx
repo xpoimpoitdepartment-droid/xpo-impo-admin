@@ -81,6 +81,8 @@ interface MultipleSelectorProps {
   >
   /** hide the clear all button. */
   hideClearAllButton?: boolean
+  hasMore?: boolean
+  onLoadMore?: () => void
 }
 
 export interface MultipleSelectorRef {
@@ -191,6 +193,8 @@ const MultipleSelector = ({
   commandProps,
   inputProps,
   hideClearAllButton = false,
+  hasMore = false,
+  onLoadMore,
 }: MultipleSelectorProps) => {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [open, setOpen] = React.useState(false)
@@ -526,7 +530,7 @@ const MultipleSelector = ({
                 disabled ||
                 selected.length < 1 ||
                 selected.filter((s) => s.fixed).length === selected.length) &&
-                "hidden"
+              "hidden"
             )}
             aria-label="Clear all"
           >
@@ -595,7 +599,7 @@ const MultipleSelector = ({
                               className={cn(
                                 "cursor-pointer",
                                 option.disable &&
-                                  "pointer-events-none cursor-not-allowed opacity-50"
+                                "pointer-events-none cursor-not-allowed opacity-50"
                               )}
                             >
                               {option.label}
@@ -605,6 +609,23 @@ const MultipleSelector = ({
                       </>
                     </CommandGroup>
                   ))}
+
+                  {hasMore && onLoadMore && (
+                    <CommandItem
+                      value="load-more-btn"
+                      onSelect={(value) => {
+                        onLoadMore();
+                      }}
+                      className="cursor-pointer flex justify-center text-blue-600 bg-gray-50 border-t py-2 hover:bg-gray-100 font-medium z-10 sticky bottom-0"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        onLoadMore();
+                      }}
+                    >
+                      {isLoading ? "Loading..." : "See More ..."}
+                    </CommandItem>
+                  )}
                 </>
               )}
             </CommandList>

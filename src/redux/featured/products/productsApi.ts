@@ -13,6 +13,31 @@ const productApi = baseApi.injectEndpoints({
       }),
       transformResponse: (response: { data: Product[] }) => response.data,
     }),
+    
+    getPaginatedAdminProducts: builder.query<{ data: Product[], meta: any }, Record<string, any>>({
+      query: params => ({
+        url: `/product`,
+        method: 'GET',
+        params,
+      }),
+      transformResponse: (response: { data: Product[], meta: any }) => response,
+      merge: (currentCache, newItems, { arg }) => {
+        if (!arg?.page || arg?.page === 1) {
+          return newItems;
+        }
+        return {
+          meta: newItems.meta,
+          data: [...(currentCache?.data || []), ...newItems.data]
+        };
+      },
+      serializeQueryArgs: ({ queryArgs }) => {
+        const { page, ...rest } = queryArgs || {};
+        return rest;
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        return currentArg?.page !== previousArg?.page;
+      },
+    }),
 
     getSingleProduct: builder.query<Product, string>({
       query: id => ({
@@ -58,5 +83,6 @@ export const {
   useCreateProductMutation,
   useDeleteProductMutation,
   useUpdateProductMutation,
-  useProductInventoryQuery
+  useProductInventoryQuery,
+  useGetPaginatedAdminProductsQuery,
 } = productApi;

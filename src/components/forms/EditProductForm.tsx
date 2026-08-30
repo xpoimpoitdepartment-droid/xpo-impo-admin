@@ -41,7 +41,7 @@ import {
 } from "@/redux/featured/categories/categorySlice";
 import { updateProductZodSchema } from "./formSchema"; // Assuming this path is correct
 import {
-  useGetAllProductsQuery,
+  useGetPaginatedAdminProductsQuery,
   useGetSingleProductQuery,
   useUpdateProductMutation,
 } from "@/redux/featured/products/productsApi";
@@ -100,8 +100,11 @@ export default function EditProductForm({ id }: { id: string }) {
   const { data: brandsu, isLoading: isBrandsLoading } =
     useGetAllBrandsQuery(undefined);
   useGetAllBrandsQuery(undefined);
-  const { data: allProducts, isLoading: isProductsLoading } =
-    useGetAllProductsQuery({});
+  const [productsLimit, setProductsLimit] = useState(10);
+  const { data: allProductsResp, isLoading: isProductsLoading } =
+    useGetPaginatedAdminProductsQuery({ limit: productsLimit });
+  const allProducts = allProductsResp?.data || [];
+  const hasMoreProducts = allProductsResp?.meta?.total > allProducts.length;
   const { data: shopDatau, isLoading: isShopDataLoading } =
     useGetAllShopsQuery();
 
@@ -1037,6 +1040,7 @@ export default function EditProductForm({ id }: { id: string }) {
                         onChange={(options) =>
                           field.onChange(options.map((opt) => opt.value))
                         }
+                        options={simplifiedProducts}
                         defaultOptions={simplifiedProducts}
                         placeholder="Select products..."
                         emptyIndicator={
@@ -1044,6 +1048,8 @@ export default function EditProductForm({ id }: { id: string }) {
                             No products found.
                           </p>
                         }
+                        hasMore={hasMoreProducts}
+                        onLoadMore={() => setProductsLimit(prev => prev + 10)}
                       />
                     )}
                   </FormControl>

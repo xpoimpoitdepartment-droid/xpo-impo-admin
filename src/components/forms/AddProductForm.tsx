@@ -39,7 +39,7 @@ import { setCategories } from "@/redux/featured/categories/categorySlice";
 
 import {
   useCreateProductMutation,
-  useGetAllProductsQuery,
+  useGetPaginatedAdminProductsQuery,
 } from "@/redux/featured/products/productsApi";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -75,8 +75,11 @@ export default function AddProductForm() {
     useGetAllTagsQuery(undefined);
   const { data: brands, isLoading: isBrandsLoading } =
     useGetAllBrandsQuery(undefined);
-  const { data: allProducts, isLoading: isProductsLoading } =
-    useGetAllProductsQuery({});
+  const [productsLimit, setProductsLimit] = useState(10);
+  const { data: allProductsResp, isLoading: isProductsLoading } =
+    useGetPaginatedAdminProductsQuery({ limit: productsLimit });
+  const allProducts = allProductsResp?.data || [];
+  const hasMoreProducts = allProductsResp?.meta?.total > allProducts.length;
   const { data: shopData, isLoading: isShopDataLoading } =
     useGetAllShopsQuery();
 
@@ -974,6 +977,7 @@ export default function AddProductForm() {
                         onChange={(options) =>
                           field.onChange(options.map((opt) => opt.value))
                         }
+                        options={simplifiedProducts}
                         defaultOptions={simplifiedProducts}
                         placeholder="Select products..."
                         emptyIndicator={
@@ -981,6 +985,8 @@ export default function AddProductForm() {
                             No products found.
                           </p>
                         }
+                        hasMore={hasMoreProducts}
+                        onLoadMore={() => setProductsLimit(prev => prev + 10)}
                       />
                     )}
                   </FormControl>
