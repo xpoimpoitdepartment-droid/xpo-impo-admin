@@ -27,6 +27,8 @@ import {
   Settings,
   MapPin,
   ArrowRight,
+  Megaphone,
+  CalendarDays,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -233,6 +235,18 @@ export function AppSidebar({
         //   label: "Return Requests",
         //   href: "/admin/courier/return-requests",
         // },
+      ],
+      marketingManagement: [
+        {
+          icon: Megaphone as IconRenderer,
+          label: "Campaigns",
+          href: "/admin/campaigns",
+        },
+        {
+          icon: CalendarDays as IconRenderer,
+          label: "Deals of the Day",
+          href: "/admin/campaigns?type=deal",
+        },
       ],
       orderVendor: [
         {
@@ -564,6 +578,12 @@ export function AppSidebar({
 
             <div className="ml-1">
               {renderSection("SETTING", navigationItems.settingManagement)}
+            </div>
+            <div className="ml-1">
+              {renderSection(
+                "MARKETING",
+                navigationItems.marketingManagement
+              )}
             </div>
             <div className="ml-1">
               {renderSection("COURIER MANAGEMENT", navigationItems.courierManagement)}
