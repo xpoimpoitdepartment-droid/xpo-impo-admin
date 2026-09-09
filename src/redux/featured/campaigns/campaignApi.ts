@@ -36,7 +36,11 @@ type CampaignPayload = Omit<Campaign, "_id" | "status" | "products"> & {
 const campaignApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
     getCampaigns: builder.query<Campaign[], Record<string, string> | void>({
-      query: (params) => ({ url: "/campaign", method: "GET", params }),
+      query: (params) => ({
+        url: "/campaign",
+        method: "GET",
+        ...(params ? { params } : {}),
+      }),
       transformResponse: (response: { data: Campaign[] }) => response.data,
       providesTags: ["Campaigns"],
     }),

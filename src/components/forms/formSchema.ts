@@ -8,7 +8,7 @@ const brandAndCategoryZodSchema = z.object({
     .min(1, { message: "At least one category is required!" }),
   tags: z
     .array(z.string({ error: () => "Tag ID must be a string!" }))
-    .min(1, { message: "At least one tag is required!" }),
+    .optional(),
 });
 
 // description validation

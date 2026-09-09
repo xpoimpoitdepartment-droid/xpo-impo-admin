@@ -923,7 +923,7 @@ export default function AddProductForm() {
                     ) : (
                       <MultipleSelector
                         value={
-                          field.value
+                          (field.value || [])
                             .map((val) =>
                               simplifiedTags.find((opt) => opt.value === val)
                             )
