@@ -52,7 +52,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-screen overflow-hidden">
+      <div className="flex min-h-screen w-screen">
         {/* Sidebar */}
         <div
           className={cn(
