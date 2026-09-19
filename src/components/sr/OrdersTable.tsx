@@ -286,7 +286,7 @@ const handlePrint = useReactToPrint({
                   textTransform: "uppercase",
                 }}
               >
-                MILKO
+                RONGO MAYA
               </div>
               <div style={{ fontSize: "10px" }}>
                 Beside Dhaka-Ctg Highway, Fateh pur, Feni Sadar, Feni.

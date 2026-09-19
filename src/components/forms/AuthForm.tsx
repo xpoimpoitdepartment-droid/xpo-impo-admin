@@ -97,7 +97,7 @@ export default function AuthForm({ type }: AuthFormProps) {
 
   return (
     <section
-      className="min-h-screen mx-auto overflow-hidden flex justify-center flex-col
+      className="min-h-screen  mx-auto overflow-hidden flex justify-center flex-col
      w-96 md:w-[450px] lg:w-[666px] sm:px-8"
     >
       <div className="flex justify-center">
